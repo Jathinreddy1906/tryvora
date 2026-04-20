@@ -1,0 +1,907 @@
+<!-- templates/viewer3d.html — DAY 3: 3D Model Viewer -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tryvora – 3D Viewer</title>
+
+    <!-- Three.js from CDN — no install needed! -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0f0a1e;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Navbar ── */
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 28px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            position: relative;
+            z-index: 10;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .nav-left a {
+            color: #a78bfa;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .nav-left span { color: #2d2040; }
+
+        .nav-badge {
+            background: linear-gradient(135deg,
+                rgba(124,58,237,0.3), rgba(79,70,229,0.3));
+            border: 1px solid rgba(124,58,237,0.4);
+            color: #a78bfa;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        /* ── Two-Column Layout ── */
+        .viewer-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 0;
+            height: calc(100vh - 60px);
+        }
+
+        @media(max-width: 900px) {
+            .viewer-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        /* ── Left: 3D Canvas ── */
+        .canvas-col {
+            position: relative;
+            background: radial-gradient(
+                ellipse at center,
+                #1a0f35 0%,
+                #0a0614 70%
+            );
+            overflow: hidden;
+        }
+
+        #threeCanvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+
+        /* Canvas overlays */
+        .canvas-overlay-top {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .model-title {
+            font-size: 0.8rem;
+            color: rgba(167,139,250,0.7);
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .drag-hint {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.25);
+            margin-top: 4px;
+        }
+
+        /* Color swatch pill */
+        .cloth-color-pill {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .cloth-dot {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        /* Controls */
+        .controls-bar {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 5;
+        }
+
+        .ctrl-btn {
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .ctrl-btn:hover {
+            background: rgba(124,58,237,0.3);
+            border-color: rgba(124,58,237,0.5);
+        }
+
+        /* ── Right: Info Panel ── */
+        .info-col {
+            background: rgba(255,255,255,0.02);
+            border-left: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .info-section {
+            padding: 24px 22px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .info-section h3 {
+            font-size: 0.78rem;
+            color: #4b5563;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 14px;
+        }
+
+        /* Result image display */
+        .result-img-box {
+            border-radius: 12px;
+            overflow: hidden;
+            background: #0a0614;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .result-img-box img {
+            width: 100%;
+            display: block;
+            max-height: 280px;
+            object-fit: contain;
+        }
+
+        .no-result-box {
+            border-radius: 12px;
+            border: 2px dashed rgba(255,255,255,0.08);
+            padding: 30px;
+            text-align: center;
+            color: #374151;
+            font-size: 0.85rem;
+        }
+
+        /* Body part labels */
+        .body-parts {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .body-part-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .body-part-row:hover {
+            border-color: rgba(167,139,250,0.25);
+            background: rgba(124,58,237,0.08);
+        }
+        .body-part-row.active {
+            border-color: rgba(167,139,250,0.5);
+            background: rgba(124,58,237,0.15);
+        }
+
+        .part-color {
+            width: 28px; height: 28px;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .part-info h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 2px;
+        }
+        .part-info p {
+            font-size: 0.72rem;
+            color: #6b7280;
+        }
+
+        /* Rotation controls */
+        .rotation-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .rot-btn {
+            flex: 1;
+            padding: 11px;
+            background: rgba(124,58,237,0.12);
+            border: 1px solid rgba(124,58,237,0.25);
+            border-radius: 10px;
+            color: #a78bfa;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .rot-btn:hover {
+            background: rgba(124,58,237,0.25);
+        }
+
+        .auto-rotate-btn {
+            width: 100%;
+            padding: 11px;
+            background: rgba(124,58,237,0.12);
+            border: 1px solid rgba(124,58,237,0.25);
+            border-radius: 10px;
+            color: #a78bfa;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .auto-rotate-btn.on {
+            background: rgba(124,58,237,0.35);
+            border-color: rgba(124,58,237,0.6);
+            color: white;
+        }
+
+        /* Action buttons */
+        .action-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .abtn {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .abtn-primary {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(124,58,237,0.3);
+        }
+        .abtn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+        .abtn-secondary {
+            background: rgba(255,255,255,0.04);
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.08);
+            justify-content: center;
+        }
+        .abtn-secondary:hover {
+            color: #e2e8f0;
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        /* Loading spinner for canvas */
+        .canvas-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            background: #0a0614;
+            z-index: 20;
+            transition: opacity 0.5s;
+        }
+
+        .canvas-loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-ring {
+            width: 50px; height: 50px;
+            border: 4px solid rgba(167,139,250,0.15);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-left">
+        <a href="/">👗 Tryvora</a>
+        <span>›</span>
+        <a href="/preview">Try On</a>
+        <span>›</span>
+        <span style="color:#9ca3af;">3D Viewer</span>
+    </div>
+    <div class="nav-badge">🧊 Three.js 3D</div>
+</nav>
+
+<!-- Main Layout -->
+<div class="viewer-layout">
+
+    <!-- ═══ LEFT: 3D Canvas ═══ -->
+    <div class="canvas-col">
+
+        <!-- Loading screen -->
+        <div class="canvas-loading" id="canvasLoading">
+            <div class="loading-ring"></div>
+            <div class="loading-text">Building 3D model...</div>
+        </div>
+
+        <!-- Three.js renders here -->
+        <canvas id="threeCanvas"></canvas>
+
+        <!-- Top overlay -->
+        <div class="canvas-overlay-top">
+            <div class="model-title">3D Try-On Model</div>
+            <div class="drag-hint">🖱️ Drag to rotate &nbsp;|&nbsp;
+                                   Scroll to zoom</div>
+        </div>
+
+        <!-- Clothing color pill -->
+        <div class="cloth-color-pill">
+            <div class="cloth-dot" id="clothDot"
+                 style="background: {{ cloth_color }}"></div>
+            <span>Clothing color: <strong id="colorLabel">
+                {{ cloth_color }}</strong></span>
+        </div>
+
+        <!-- Zoom buttons -->
+        <div class="controls-bar">
+            <button class="ctrl-btn" onclick="zoom(1.15)"
+                    title="Zoom In">+</button>
+            <button class="ctrl-btn" onclick="zoom(0.87)"
+                    title="Zoom Out">−</button>
+            <button class="ctrl-btn" onclick="resetCamera()"
+                    title="Reset">⟳</button>
+        </div>
+
+    </div>
+
+    <!-- ═══ RIGHT: Info Panel ═══ -->
+    <div class="info-col">
+
+        <!-- Result image -->
+        <div class="info-section">
+            <h3>📸 Your Try-On Result</h3>
+            {% if result_image %}
+                <div class="result-img-box">
+                    <img src="{{ url_for('static',
+                                        filename=result_image) }}"
+                         alt="Result">
+                </div>
+            {% else %}
+                <div class="no-result-box">
+                    <div style="font-size:2rem;margin-bottom:8px;">👗</div>
+                    <p>No result yet.<br>
+                       <a href="/preview"
+                          style="color:#a78bfa;">Run the try-on first</a>
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Body parts -->
+        <div class="info-section">
+            <h3>🧍 Model Parts</h3>
+            <div class="body-parts">
+                <div class="body-part-row active" id="part-top"
+                     onclick="highlightPart('top')">
+                    <div class="part-color"
+                         style="background:{{ cloth_color }}"></div>
+                    <div class="part-info">
+                        <h4>Top / Clothing</h4>
+                        <p>Click to highlight on model</p>
+                    </div>
+                </div>
+                <div class="body-part-row" id="part-skin"
+                     onclick="highlightPart('skin')">
+                    <div class="part-color"
+                         style="background:#d4956a"></div>
+                    <div class="part-info">
+                        <h4>Skin</h4>
+                        <p>Head, hands, legs</p>
+                    </div>
+                </div>
+                <div class="body-part-row" id="part-pants"
+                     onclick="highlightPart('pants')">
+                    <div class="part-color"
+                         style="background:#1e3a5f"></div>
+                    <div class="part-info">
+                        <h4>Pants (default)</h4>
+                        <p>Dark navy trousers</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rotation controls -->
+        <div class="info-section">
+            <h3>🔄 Rotation Controls</h3>
+            <div class="rotation-controls">
+                <button class="rot-btn"
+                        onclick="manualRotate(-0.3)"
+                        title="Rotate Left">◀</button>
+                <button class="rot-btn"
+                        onclick="manualRotate(0.3)"
+                        title="Rotate Right">▶</button>
+            </div>
+            <button class="auto-rotate-btn" id="autoBtn"
+                    onclick="toggleAuto()">
+                ▶ Auto Rotate
+            </button>
+        </div>
+
+        <!-- Actions -->
+        <div class="info-section">
+            <h3>🚀 Actions</h3>
+            <div class="action-btns">
+                <a href="/preview" class="abtn abtn-primary">
+                    ✨ New Try-On
+                </a>
+                {% if result_image %}
+                <a href="{{ url_for('static', filename=result_image) }}"
+                   download="tryvora_result.jpg"
+                   class="abtn abtn-secondary">
+                    ⬇️ Download Result
+                </a>
+                {% endif %}
+                <a href="/upload" class="abtn abtn-secondary">
+                    📤 Upload New Images
+                </a>
+            </div>
+        </div>
+
+    </div><!-- end info-col -->
+</div><!-- end viewer-layout -->
+
+
+<script>
+// ════════════════════════════════════════════════════════
+// THREE.JS 3D HUMAN MODEL
+// We build the model from basic shapes:
+//   - Sphere    → head
+//   - Cylinder  → neck
+//   - Box       → torso (clothing color!)
+//   - Cylinders → upper arms, lower arms
+//   - Cylinders → upper legs, lower legs
+//   - Boxes     → feet
+//   - Sphere    → hip connector
+// ════════════════════════════════════════════════════════
+
+// ── Colors ───────────────────────────────────────────────
+const CLOTH_COLOR = '{{ cloth_color }}';
+const SKIN_COLOR  = 0xd4956a;
+const PANTS_COLOR = 0x1e3a5f;
+const SHOE_COLOR  = 0x1a1a1a;
+
+// Convert hex string to Three.js color number
+function hexToNum(hex) {
+    return parseInt(hex.replace('#', ''), 16);
+}
+
+// ── Scene Setup ───────────────────────────────────────────
+const canvas   = document.getElementById('threeCanvas');
+const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: true
+});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0614);
+
+// Subtle fog for depth
+scene.fog = new THREE.Fog(0x0a0614, 18, 35);
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+camera.position.set(0, 1.2, 8);
+camera.lookAt(0, 1.2, 0);
+
+// ── Lighting ──────────────────────────────────────────────
+// Ambient (fills shadows)
+const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+scene.add(ambient);
+
+// Main key light (front-left)
+const keyLight = new THREE.DirectionalLight(0xfff5e6, 1.1);
+keyLight.position.set(3, 6, 5);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.width  = 1024;
+keyLight.shadow.mapSize.height = 1024;
+scene.add(keyLight);
+
+// Fill light (front-right, softer)
+const fillLight = new THREE.DirectionalLight(0xe6f0ff, 0.45);
+fillLight.position.set(-3, 4, 3);
+scene.add(fillLight);
+
+// Rim light (back, for silhouette)
+const rimLight = new THREE.DirectionalLight(0xa78bfa, 0.35);
+rimLight.position.set(0, 3, -5);
+scene.add(rimLight);
+
+// ── Materials ─────────────────────────────────────────────
+const skinMat  = new THREE.MeshLambertMaterial({ color: SKIN_COLOR });
+const clothMat = new THREE.MeshLambertMaterial({
+    color: hexToNum(CLOTH_COLOR)
+});
+const pantsMat = new THREE.MeshLambertMaterial({ color: PANTS_COLOR });
+const shoeMat  = new THREE.MeshLambertMaterial({ color: SHOE_COLOR  });
+const hairMat  = new THREE.MeshLambertMaterial({ color: 0x2c1810    });
+
+// ── Helper: make a mesh ────────────────────────────────────
+function mesh(geometry, material) {
+    const m = new THREE.Mesh(geometry, material);
+    m.castShadow    = true;
+    m.receiveShadow = true;
+    return m;
+}
+
+// ── Build Human Body ──────────────────────────────────────
+const body = new THREE.Group();
+
+// All parts stored for highlighting
+const clothParts = [];
+const skinParts  = [];
+const pantsParts = [];
+
+function addTo(m, arr) { arr.push(m); return m; }
+
+// HEAD
+const head = mesh(new THREE.SphereGeometry(0.38, 20, 20), skinMat);
+head.position.set(0, 3.78, 0);
+body.add(addTo(head, skinParts));
+
+// HAIR (cap on top of head)
+const hair = mesh(
+    new THREE.SphereGeometry(0.38, 20, 20, 0, Math.PI*2, 0, Math.PI*0.45),
+    hairMat
+);
+hair.position.copy(head.position);
+hair.position.y += 0.04;
+body.add(hair);
+
+// NECK
+const neck = mesh(
+    new THREE.CylinderGeometry(0.13, 0.15, 0.28, 12),
+    skinMat
+);
+neck.position.set(0, 3.28, 0);
+body.add(addTo(neck, skinParts));
+
+// TORSO — the main clothing piece
+const torso = mesh(
+    new THREE.BoxGeometry(1.10, 1.45, 0.52),
+    clothMat
+);
+torso.position.set(0, 2.18, 0);
+body.add(addTo(torso, clothParts));
+
+// Chest detail (slight protrusion)
+const chest = mesh(
+    new THREE.BoxGeometry(0.85, 0.55, 0.08),
+    clothMat
+);
+chest.position.set(0, 2.45, 0.28);
+body.add(addTo(chest, clothParts));
+
+// HIPS
+const hips = mesh(
+    new THREE.CylinderGeometry(0.52, 0.50, 0.32, 14),
+    clothMat
+);
+hips.position.set(0, 1.38, 0);
+body.add(addTo(hips, clothParts));
+
+// ── ARMS ──────────────────────────────────────────────────
+[[-1, 1], [1, 1]].forEach(function([side, _]) {
+    const sx = side * 0.70;
+
+    // Shoulder ball
+    const shoulder = mesh(
+        new THREE.SphereGeometry(0.20, 12, 12),
+        clothMat
+    );
+    shoulder.position.set(sx, 2.78, 0);
+    body.add(addTo(shoulder, clothParts));
+
+    // Upper arm
+    const upperArm = mesh(
+        new THREE.CylinderGeometry(0.145, 0.135, 0.72, 10),
+        clothMat
+    );
+    upperArm.position.set(sx, 2.28, 0);
+    body.add(addTo(upperArm, clothParts));
+
+    // Elbow
+    const elbow = mesh(
+        new THREE.SphereGeometry(0.135, 10, 10),
+        skinMat
+    );
+    elbow.position.set(sx, 1.88, 0);
+    body.add(addTo(elbow, skinParts));
+
+    // Lower arm
+    const lowerArm = mesh(
+        new THREE.CylinderGeometry(0.115, 0.10, 0.68, 10),
+        skinMat
+    );
+    lowerArm.position.set(sx, 1.48, 0);
+    body.add(addTo(lowerArm, skinParts));
+
+    // Hand
+    const hand = mesh(
+        new THREE.SphereGeometry(0.115, 10, 10),
+        skinMat
+    );
+    hand.position.set(sx, 1.08, 0);
+    body.add(addTo(hand, skinParts));
+});
+
+// ── LEGS ──────────────────────────────────────────────────
+[[-0.28, 1], [0.28, 1]].forEach(function([lx, _]) {
+
+    // Upper leg
+    const upperLeg = mesh(
+        new THREE.CylinderGeometry(0.21, 0.185, 0.92, 12),
+        pantsMat
+    );
+    upperLeg.position.set(lx, 0.82, 0);
+    body.add(addTo(upperLeg, pantsParts));
+
+    // Knee
+    const knee = mesh(
+        new THREE.SphereGeometry(0.18, 10, 10),
+        pantsMat
+    );
+    knee.position.set(lx, 0.32, 0);
+    body.add(addTo(knee, pantsParts));
+
+    // Lower leg
+    const lowerLeg = mesh(
+        new THREE.CylinderGeometry(0.155, 0.13, 0.72, 10),
+        pantsMat
+    );
+    lowerLeg.position.set(lx, -0.18, 0);
+    body.add(addTo(lowerLeg, pantsParts));
+
+    // Ankle
+    const ankle = mesh(
+        new THREE.SphereGeometry(0.125, 10, 10),
+        skinMat
+    );
+    ankle.position.set(lx, -0.60, 0);
+    body.add(addTo(ankle, skinParts));
+
+    // Shoe / Foot
+    const shoe = mesh(
+        new THREE.BoxGeometry(0.24, 0.14, 0.38),
+        shoeMat
+    );
+    shoe.position.set(lx, -0.73, 0.06);
+    body.add(shoe);
+});
+
+scene.add(body);
+
+// ── Ground shadow plane ───────────────────────────────────
+const groundGeo  = new THREE.PlaneGeometry(10, 10);
+const groundMat  = new THREE.MeshLambertMaterial({
+    color: 0x0d0820,
+    transparent: true,
+    opacity: 0.6
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x  = -Math.PI / 2;
+ground.position.y  = -0.82;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Subtle grid
+const grid = new THREE.GridHelper(8, 12, 0x1a0f35, 0x1a0f35);
+grid.position.y = -0.81;
+scene.add(grid);
+
+// ── Resize handler ────────────────────────────────────────
+function resize() {
+    const col = document.querySelector('.canvas-col');
+    const w   = col.clientWidth;
+    const h   = col.clientHeight || window.innerHeight - 60;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Mouse / Touch drag to rotate ─────────────────────────
+let isDragging  = false;
+let prevX       = 0;
+let rotY        = 0;
+let autoRotate  = false;
+let autoSpeed   = 0.008;
+
+canvas.addEventListener('mousedown',  e => { isDragging = true; prevX = e.clientX; });
+document.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - prevX;
+    rotY    += dx * 0.012;
+    prevX    = e.clientX;
+});
+document.addEventListener('mouseup',   () => { isDragging = false; });
+
+canvas.addEventListener('touchstart', e => {
+    isDragging = true;
+    prevX = e.touches[0].clientX;
+}, {passive: true});
+canvas.addEventListener('touchmove', e => {
+    if (!isDragging) return;
+    const dx = e.touches[0].clientX - prevX;
+    rotY    += dx * 0.012;
+    prevX    = e.touches[0].clientX;
+}, {passive: true});
+canvas.addEventListener('touchend', () => { isDragging = false; });
+
+// Scroll to zoom
+canvas.addEventListener('wheel', e => {
+    camera.position.z = Math.max(3,
+        Math.min(14, camera.position.z + e.deltaY * 0.01));
+}, {passive: true});
+
+// ── Control functions ──────────────────────────────────────
+function zoom(factor) {
+    camera.position.z = Math.max(3, Math.min(14,
+        camera.position.z * factor));
+}
+
+function resetCamera() {
+    camera.position.set(0, 1.2, 8);
+    camera.lookAt(0, 1.2, 0);
+    rotY = 0;
+}
+
+function manualRotate(amount) {
+    rotY += amount;
+}
+
+function toggleAuto() {
+    autoRotate = !autoRotate;
+    const btn  = document.getElementById('autoBtn');
+    btn.textContent = autoRotate ? '⏸ Stop Rotation' : '▶ Auto Rotate';
+    btn.className   = 'auto-rotate-btn' + (autoRotate ? ' on' : '');
+}
+
+// ── Part highlighting ──────────────────────────────────────
+function highlightPart(part) {
+    // Reset all rows
+    ['part-top','part-skin','part-pants'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+    });
+    document.getElementById('part-' + part).classList.add('active');
+
+    // Pulse the highlighted part
+    let arr = part === 'top'   ? clothParts :
+              part === 'skin'  ? skinParts  : pantsParts;
+
+    const origEmissive = new THREE.Color(0x000000);
+    const flashColor   = new THREE.Color(0x6644aa);
+
+    arr.forEach(m => m.material.emissive.copy(flashColor));
+    setTimeout(() => {
+        arr.forEach(m => m.material.emissive.copy(origEmissive));
+    }, 600);
+}
+
+// ── Animation Loop ────────────────────────────────────────
+let loadingHidden = false;
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    // Auto-rotate
+    if (autoRotate && !isDragging) {
+        rotY += autoSpeed;
+    }
+
+    // Apply rotation
+    body.rotation.y = rotY;
+
+    // Gentle breathing effect (tiny Y oscillation)
+    body.position.y = Math.sin(Date.now() * 0.001) * 0.02;
+
+    renderer.render(scene, camera);
+
+    // Hide loading screen after first frame
+    if (!loadingHidden) {
+        loadingHidden = true;
+        setTimeout(() => {
+            const el = document.getElementById('canvasLoading');
+            el.classList.add('hidden');
+            setTimeout(() => el.style.display = 'none', 500);
+        }, 300);
+    }
+}
+
+animate();
+</script>
+
+</body>
+</html>

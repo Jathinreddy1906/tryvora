@@ -1,0 +1,374 @@
+<!-- templates/debug_view.html — AI Debug Viewer -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tryvora – AI Debug View</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #080614;
+            color: white;
+            min-height: 100vh;
+            padding: 20px 16px 60px;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 1200px;
+            margin: 0 auto 24px;
+            font-size: 0.88rem;
+        }
+        .navbar a {
+            color: #a78bfa;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .navbar span { color: #2d2040; }
+
+        .page-title {
+            max-width: 1200px;
+            margin: 0 auto 28px;
+        }
+
+        .page-title h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 5px;
+        }
+
+        .page-title p {
+            color: #374151;
+            font-size: 0.83rem;
+        }
+
+        /* Section */
+        .debug-section {
+            max-width: 1200px;
+            margin: 0 auto 36px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .section-title h2 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+        }
+
+        .section-line {
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Image grid */
+        .img-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fill, minmax(220px, 1fr)
+            );
+            gap: 16px;
+        }
+
+        .img-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+
+        .img-card:hover {
+            border-color: rgba(167,139,250,0.3);
+            transform: translateY(-2px);
+        }
+
+        .img-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+            background: #0d0920;
+        }
+
+        .img-card-info {
+            padding: 12px 14px;
+        }
+
+        .img-card-info h4 {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 3px;
+        }
+
+        .img-card-info p {
+            font-size: 0.72rem;
+            color: #4b5563;
+            line-height: 1.4;
+        }
+
+        .img-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .badge-seg  {
+            background:rgba(239,68,68,0.15);
+            color:#fca5a5;
+        }
+
+        .badge-prep {
+            background:rgba(96,165,250,0.12);
+            color:#93c5fd;
+        }
+
+        .badge-out  {
+            background:rgba(52,211,153,0.12);
+            color:#6ee7b7;
+        }
+
+        /* Missing image */
+        .img-missing {
+            width: 100%;
+            height: 180px;
+            background: rgba(255,255,255,0.02);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1f2937;
+            font-size: 0.75rem;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .lightbox.open { display: flex; }
+
+        .lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 12px;
+            object-fit: contain;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px; right: 24px;
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: #6b7280;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+
+        .lightbox-close:hover { color: white; }
+
+        .lightbox-label {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.82rem;
+            color: #9ca3af;
+        }
+
+        /* Back button */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 22px;
+            background: linear-gradient(135deg,#7c3aed,#4f46e5);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            max-width: 1200px;
+            display: block;
+            width: fit-content;
+            margin: 0 auto 28px;
+        }
+
+        .back-btn:hover { opacity: 0.88; }
+
+        /* No images notice */
+        .no-images {
+            text-align: center;
+            padding: 60px 20px;
+            color: #374151;
+        }
+
+        .no-images .icon {
+            font-size: 3rem;
+            margin-bottom: 14px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <a href="/">👗 Tryvora</a>
+    <span>›</span>
+    <a href="/preview">Studio</a>
+    <span>›</span>
+    <span style="color:#9ca3af;">Debug View</span>
+</div>
+
+<a href="/preview" class="back-btn">
+    ← Back to Studio
+</a>
+
+<div class="page-title">
+    <h1>🔬 AI Debug View</h1>
+    <p>See every intermediate step the AI pipeline produced</p>
+</div>
+
+<!-- SECTION 1: Final Output -->
+<div class="debug-section">
+    <div class="section-title">
+        <h2>✅ Final Output</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="img-grid">
+        {% for img in output_images %}
+        <div class="img-card"
+             onclick="openLightbox('{{ img.url }}',
+                      '{{ img.title }}')">
+            <img src="{{ img.url }}"
+                 alt="{{ img.title }}"
+                 onerror="this.parentNode.innerHTML=
+                     '<div class=img-missing>Not generated yet</div>'">
+            <div class="img-card-info">
+                <h4>{{ img.title }}</h4>
+                <p>{{ img.desc }}</p>
+                <span class="img-badge badge-out">
+                    Output
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- SECTION 2: Segmentation Debug -->
+<div class="debug-section">
+    <div class="section-title">
+        <h2>🔍 Step 1 — Segmentation</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="img-grid">
+        {% for img in seg_images %}
+        <div class="img-card"
+             onclick="openLightbox('{{ img.url }}',
+                      '{{ img.title }}')">
+            <img src="{{ img.url }}"
+                 alt="{{ img.title }}"
+                 onerror="this.parentNode.innerHTML=
+                     '<div class=img-missing>Not generated yet</div>'">
+            <div class="img-card-info">
+                <h4>{{ img.title }}</h4>
+                <p>{{ img.desc }}</p>
+                <span class="img-badge badge-seg">
+                    Segmentation
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- SECTION 3: Input Prep Debug -->
+<div class="debug-section">
+    <div class="section-title">
+        <h2>📐 Steps 2-3 — Input Preparation</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="img-grid">
+        {% for img in prep_images %}
+        <div class="img-card"
+             onclick="openLightbox('{{ img.url }}',
+                      '{{ img.title }}')">
+            <img src="{{ img.url }}"
+                 alt="{{ img.title }}"
+                 onerror="this.parentNode.innerHTML=
+                     '<div class=img-missing>Not generated yet</div>'">
+            <div class="img-card-info">
+                <h4>{{ img.title }}</h4>
+                <p>{{ img.desc }}</p>
+                <span class="img-badge badge-prep">
+                    Preparation
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox"
+     onclick="closeLightbox()">
+    <button class="lightbox-close"
+            onclick="closeLightbox()">✕</button>
+    <img id="lightboxImg" src="" alt="">
+    <div class="lightbox-label" id="lightboxLabel"></div>
+</div>
+
+<script>
+function openLightbox(url, label) {
+    const lb    = document.getElementById('lightbox');
+    const img   = document.getElementById('lightboxImg');
+    const lbl   = document.getElementById('lightboxLabel');
+    img.src     = url;
+    lbl.textContent = label;
+    lb.classList.add('open');
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox')
+            .classList.remove('open');
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

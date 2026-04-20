@@ -1,0 +1,326 @@
+<!-- templates/upload.html — Upload Page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tryvora – Upload Images</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f8f7ff;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+
+        /* ── Top Navigation ── */
+        .navbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .navbar a {
+            text-decoration: none;
+            color: #5b21b6;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .navbar span { color: #9ca3af; }
+
+        /* ── Flash Messages ── */
+        .messages { max-width: 800px; margin: 0 auto 20px auto; }
+
+        .msg {
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+
+        .msg.success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
+        .msg.error   { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+
+        /* ── Main Card ── */
+        .card {
+            background: white;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #1f2937;
+            font-size: 1.6rem;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            font-size: 0.95rem;
+            margin-bottom: 35px;
+        }
+
+        /* ── Upload Grid ── */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 600px) {
+            .upload-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── Upload Box ── */
+        .upload-box {
+            border: 2px dashed #c4b5fd;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #faf5ff;
+        }
+
+        .upload-box:hover {
+            border-color: #7c3aed;
+            background: #f3e8ff;
+        }
+
+        .upload-box.dragover {
+            border-color: #7c3aed;
+            background: #ede9fe;
+            transform: scale(1.02);
+        }
+
+        .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+        .upload-box h3 {
+            color: #374151;
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+
+        .upload-box p {
+            color: #9ca3af;
+            font-size: 0.82rem;
+            margin-bottom: 14px;
+        }
+
+        /* Hidden real file input */
+        .upload-box input[type="file"] {
+            display: none;
+        }
+
+        /* Fake button */
+        .btn-choose {
+            background: #7c3aed;
+            color: white;
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            cursor: pointer;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .btn-choose:hover { background: #6d28d9; }
+
+        /* Preview thumbnail */
+        .preview-img {
+            max-width: 100%;
+            max-height: 180px;
+            border-radius: 10px;
+            margin-top: 12px;
+            display: none;
+            object-fit: cover;
+        }
+
+        .file-name {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+
+        /* ── Submit Button ── */
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-submit:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ── Tips Box ── */
+        .tips {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 24px;
+        }
+
+        .tips h4 { color: #166534; font-size: 0.9rem; margin-bottom: 8px; }
+        .tips ul  { padding-left: 18px; }
+        .tips li  { color: #15803d; font-size: 0.85rem; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <div class="navbar">
+        <a href="/">👗 Tryvora</a>
+        <span>›</span>
+        <span style="color:#374151">Upload Images</span>
+    </div>
+
+    <!-- Flash Messages -->
+    <div class="messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="msg {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+        <h1>📤 Upload Your Images</h1>
+        <p class="subtitle">Upload a photo of yourself + the clothing item you want to try on</p>
+
+        <form method="POST" action="/upload" enctype="multipart/form-data" id="uploadForm">
+
+            <div class="upload-grid">
+
+                <!-- Person Image Upload -->
+                <div class="upload-box" id="personBox" onclick="document.getElementById('person_input').click()">
+                    <div class="upload-icon">🧍</div>
+                    <h3>Your Photo</h3>
+                    <p>Full body photo works best<br>JPG or PNG</p>
+                    <label class="btn-choose">Choose File</label>
+                    <input type="file" name="person_image" id="person_input"
+                           accept=".jpg,.jpeg,.png,.webp"
+                           onchange="previewImage(this, 'person_preview', 'person_name')">
+                    <img id="person_preview" class="preview-img" alt="Person preview">
+                    <p id="person_name" class="file-name">No file chosen</p>
+                </div>
+
+                <!-- Clothing Image Upload -->
+                <div class="upload-box" id="clothingBox" onclick="document.getElementById('clothing_input').click()">
+                    <div class="upload-icon">👔</div>
+                    <h3>Clothing Item</h3>
+                    <p>T-shirt, jacket, top, etc.<br>PNG with transparency is best</p>
+                    <label class="btn-choose">Choose File</label>
+                    <input type="file" name="clothing_image" id="clothing_input"
+                           accept=".jpg,.jpeg,.png,.webp"
+                           onchange="previewImage(this, 'clothing_preview', 'clothing_name')">
+                    <img id="clothing_preview" class="preview-img" alt="Clothing preview">
+                    <p id="clothing_name" class="file-name">No file chosen</p>
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                🚀 Upload & Preview Images
+            </button>
+
+        </form>
+
+        <!-- Tips -->
+        <div class="tips">
+            <h4>💡 Tips for Best Results</h4>
+            <ul>
+                <li>Use a clear, well-lit full-body photo for yourself</li>
+                <li>Clothing on a plain/white background works best</li>
+                <li>PNG format for clothing keeps transparency</li>
+                <li>Image size up to 10MB is supported</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Show image preview when user picks a file
+        function previewImage(input, previewId, nameId) {
+            const preview = document.getElementById(previewId);
+            const nameEl = document.getElementById(nameId);
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';  // show the preview
+                };
+
+                reader.readAsDataURL(file);
+                nameEl.textContent = '📎 ' + file.name;
+            }
+        }
+
+        // Drag and Drop support
+        ['personBox', 'clothingBox'].forEach(function(boxId) {
+            const box = document.getElementById(boxId);
+
+            box.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                box.classList.add('dragover');
+            });
+
+            box.addEventListener('dragleave', function() {
+                box.classList.remove('dragover');
+            });
+
+            box.addEventListener('drop', function(e) {
+                e.preventDefault();
+                box.classList.remove('dragover');
+
+                const inputId = boxId === 'personBox' ? 'person_input' : 'clothing_input';
+                const previewId = boxId === 'personBox' ? 'person_preview' : 'clothing_preview';
+                const nameId = boxId === 'personBox' ? 'person_name' : 'clothing_name';
+
+                const input = document.getElementById(inputId);
+                input.files = e.dataTransfer.files;
+                previewImage(input, previewId, nameId);
+            });
+        });
+
+        // Show loading state when form is submitted
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            const btn = document.getElementById('submitBtn');
+            btn.textContent = '⏳ Uploading...';
+            btn.disabled = true;
+        });
+    </script>
+
+</body>
+</html>

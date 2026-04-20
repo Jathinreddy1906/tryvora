@@ -1,0 +1,1574 @@
+<!-- templates/preview.html — STEP 5 FINAL AI UI -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tryvora AI – Try On Studio</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #080614;
+            color: white;
+            min-height: 100vh;
+            padding: 20px 16px 60px;
+        }
+
+        /* ── Background glow ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 15% 40%,
+                    rgba(124,58,237,0.12) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 20%,
+                    rgba(79,70,229,0.10) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-content { position: relative; z-index: 1; }
+
+        /* ── Navbar ── */
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1260px;
+            margin: 0 auto 24px;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+        }
+        .nav-left a {
+            color: #a78bfa;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .nav-left span { color: #2d2040; }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(124,58,237,0.15);
+            border: 1px solid rgba(124,58,237,0.3);
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
+        .ai-dot {
+            width: 7px; height: 7px;
+            background: #a78bfa;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%,100% { opacity:1; transform:scale(1); }
+            50%      { opacity:0.5; transform:scale(0.7); }
+        }
+
+        /* ── Page Title ── */
+        .page-header {
+            max-width: 1260px;
+            margin: 0 auto 22px;
+        }
+
+        .page-header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+
+        .page-header p {
+            font-size: 0.82rem;
+            color: #374151;
+        }
+
+        /* ── Main 3-col grid ── */
+        .studio-grid {
+            display: grid;
+            grid-template-columns: 270px 1fr 300px;
+            gap: 18px;
+            max-width: 1260px;
+            margin: 0 auto;
+        }
+
+        @media(max-width:1100px) {
+            .studio-grid {
+                grid-template-columns: 240px 1fr;
+            }
+            .rec-col { display: none; }
+        }
+
+        @media(max-width:700px) {
+            .studio-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── Panel base ── */
+        .panel {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .panel-hd {
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-hd h3 {
+            font-size: 0.76rem;
+            color: #4b5563;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            font-weight: 600;
+        }
+
+        .panel-bd { padding: 18px; }
+
+        /* ── Left: Inputs ── */
+        .img-label {
+            font-size: 0.72rem;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 7px;
+        }
+
+        .img-thumb {
+            width: 100%;
+            border-radius: 10px;
+            object-fit: cover;
+            max-height: 185px;
+            background: #0d0920;
+            display: block;
+        }
+
+        .img-section { margin-bottom: 16px; }
+
+        .ready-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            color: #34d399;
+            margin-top: 7px;
+            background: rgba(52,211,153,0.08);
+            padding: 3px 9px;
+            border-radius: 20px;
+            border: 1px solid rgba(52,211,153,0.15);
+        }
+
+        /* Pipeline info */
+        .pipeline-card {
+            background: rgba(124,58,237,0.07);
+            border: 1px solid rgba(124,58,237,0.15);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+        }
+
+        .pipeline-card h4 {
+            font-size: 0.75rem;
+            color: #7c3aed;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .pipeline-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .pipeline-row span:first-child {
+            width: 14px;
+            text-align: center;
+        }
+
+        /* Buttons */
+        .btn-generate {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            box-shadow: 0 0 24px rgba(124,58,237,0.3);
+            letter-spacing: 0.2px;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 38px rgba(124,58,237,0.5);
+        }
+
+        .btn-generate:disabled {
+            background: #1a1030;
+            color: #2d2040;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-reupload {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 9px;
+            background: transparent;
+            color: #374151;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-reupload:hover {
+            color: #a78bfa;
+            border-color: rgba(167,139,250,0.25);
+        }
+
+        /* ── Middle: Result ── */
+        .result-col {
+            display: flex;
+            flex-direction: column;
+            min-height: 560px;
+        }
+
+        .result-body {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+            min-height: 420px;
+        }
+
+        /* ── Empty State ── */
+        .empty-state { text-align: center; }
+
+        .empty-icon {
+            font-size: 3.5rem;
+            opacity: 0.12;
+            margin-bottom: 14px;
+        }
+
+        .empty-state h3 {
+            color: #1a1030;
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+
+        .empty-state p {
+            color: #111;
+            font-size: 0.8rem;
+        }
+
+        /* ── AI Loading State ── */
+        .loading-state {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            gap: 0;
+        }
+
+        /* Animated AI brain */
+        .ai-brain {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+
+        .brain-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            animation: spinRing 1.2s linear infinite;
+        }
+
+        .brain-ring:nth-child(1) {
+            border-top-color: #a78bfa;
+            animation-duration: 1.0s;
+        }
+
+        .brain-ring:nth-child(2) {
+            inset: 10px;
+            border-right-color: #60a5fa;
+            animation-duration: 1.4s;
+            animation-direction: reverse;
+        }
+
+        .brain-ring:nth-child(3) {
+            inset: 22px;
+            border-bottom-color: #f472b6;
+            animation-duration: 1.8s;
+        }
+
+        .brain-emoji {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        @keyframes spinRing {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+
+        .loading-subtitle {
+            font-size: 0.78rem;
+            color: #4b5563;
+            margin-bottom: 22px;
+            text-align: center;
+            min-height: 20px;
+            transition: all 0.3s;
+        }
+
+        /* Progress bar */
+        .progress-bar-wrap {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            height: 6px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(
+                90deg, #7c3aed, #a78bfa, #60a5fa
+            );
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.8s ease;
+            background-size: 200% 100%;
+            animation: shimmerBar 2s linear infinite;
+        }
+
+        @keyframes shimmerBar {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* AI Steps */
+        .ai-steps {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .ai-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.79rem;
+            color: #1f2937;
+            transition: all 0.3s;
+        }
+
+        .ai-step.active {
+            background: rgba(124,58,237,0.1);
+            border-color: rgba(124,58,237,0.2);
+            color: #c4b5fd;
+        }
+
+        .ai-step.done {
+            background: rgba(52,211,153,0.06);
+            border-color: rgba(52,211,153,0.12);
+            color: #34d399;
+        }
+
+        .step-icon {
+            font-size: 0.9rem;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .step-text { flex: 1; }
+
+        .step-check {
+            font-size: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .ai-step.done .step-check { opacity: 1; }
+
+        .step-spinner {
+            width: 12px; height: 12px;
+            border: 2px solid rgba(167,139,250,0.2);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+            display: none;
+        }
+
+        .ai-step.active .step-spinner { display: block; }
+        .ai-step.active .step-check   { display: none; }
+
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* ── Result State ── */
+        .result-state {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+        }
+
+        .result-state img {
+            max-width: 100%;
+            max-height: 450px;
+            border-radius: 14px;
+            object-fit: contain;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+            animation: fadeUp 0.6s ease;
+        }
+
+        @keyframes fadeUp {
+            from { opacity:0; transform:translateY(12px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* Result meta bar */
+        .result-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .chip-ai {
+            background: rgba(124,58,237,0.15);
+            color: #a78bfa;
+            border: 1px solid rgba(124,58,237,0.2);
+        }
+
+        .chip-time {
+            background: rgba(52,211,153,0.1);
+            color: #34d399;
+            border: 1px solid rgba(52,211,153,0.15);
+        }
+
+        .chip-hd {
+            background: rgba(96,165,250,0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(96,165,250,0.15);
+        }
+
+        /* Result buttons */
+        .result-btns {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .rbtn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 18px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            font-family: inherit;
+        }
+
+        .rbtn-dl {
+            background: linear-gradient(135deg,#10b981,#059669);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16,185,129,0.3);
+        }
+
+        .rbtn-dl:hover { opacity:0.88; transform:translateY(-1px); }
+
+        .rbtn-view {
+            background: rgba(167,139,250,0.1);
+            color: #a78bfa;
+            border: 1px solid rgba(167,139,250,0.2);
+        }
+
+        .rbtn-view:hover { background:rgba(167,139,250,0.2); }
+
+        .rbtn-debug {
+            background: rgba(251,191,36,0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.2);
+        }
+
+        .rbtn-debug:hover { background:rgba(251,191,36,0.18); }
+
+        .rbtn-3d {
+            background: rgba(96,165,250,0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(96,165,250,0.2);
+        }
+
+        .rbtn-3d:hover { background:rgba(96,165,250,0.2); }
+
+        /* ── Error State ── */
+        .error-box {
+            display: none;
+            background: rgba(239,68,68,0.07);
+            border: 1px solid rgba(239,68,68,0.2);
+            color: #fca5a5;
+            border-radius: 12px;
+            padding: 16px 18px;
+            font-size: 0.84rem;
+            text-align: center;
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .error-box button {
+            margin-top: 10px;
+            padding: 7px 18px;
+            background: rgba(239,68,68,0.2);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #fca5a5;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: inherit;
+        }
+
+        /* ── Compare Slider ── */
+        .compare-bar {
+            display: none;
+            padding: 0 18px 18px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .compare-hd {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0 10px;
+            font-size: 0.72rem;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cmp-wrap {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: ew-resize;
+            user-select: none;
+            max-height: 240px;
+        }
+
+        .cmp-wrap img.cmp-base {
+            width: 100%;
+            display: block;
+            max-height: 240px;
+            object-fit: cover;
+        }
+
+        .cmp-after-pane {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        .cmp-after-pane img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cmp-handle {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 2px;
+            background: rgba(255,255,255,0.8);
+            cursor: ew-resize;
+        }
+
+        .cmp-circle {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            width: 34px; height: 34px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #7c3aed;
+            font-weight: 800;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+        }
+
+        .cmp-lbl {
+            position: absolute;
+            bottom: 9px;
+            padding: 2px 9px;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .cmp-lbl-b { left:7px; background:rgba(0,0,0,0.55); color:white; }
+        .cmp-lbl-a { right:7px; background:rgba(124,58,237,0.85); color:white; }
+
+        /* ── Right: Recommendations ── */
+        .rec-col .panel-bd {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rec-empty {
+            text-align: center;
+            padding: 30px 10px;
+            color: #1a1030;
+            font-size: 0.82rem;
+        }
+
+        .rec-loading {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .skeleton {
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            animation: shimmer 1.6s infinite;
+        }
+
+        @keyframes shimmer {
+            0%,100% { opacity:0.4; }
+            50%      { opacity:0.9; }
+        }
+
+        .detected-color {
+            display: none;
+            border-radius: 12px;
+            padding: 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-bottom: 10px;
+        }
+
+        .color-swatch {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.12);
+            flex-shrink: 0;
+        }
+
+        .color-info h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .color-info p {
+            font-size: 0.72rem;
+            color: #4b5563;
+            margin-top: 1px;
+        }
+
+        .style-tip {
+            font-size: 0.76rem;
+            color: #6b7280;
+            line-height: 1.5;
+            padding: 9px 11px;
+            background: rgba(124,58,237,0.06);
+            border-radius: 8px;
+            border-left: 3px solid rgba(124,58,237,0.4);
+        }
+
+        .palette-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .palette-dot {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .palette-dot:hover { transform: scale(1.25); }
+
+        .matches-title {
+            font-size: 0.72rem;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .match-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 11px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 11px;
+            transition: border-color 0.2s;
+        }
+
+        .match-card:hover {
+            border-color: rgba(167,139,250,0.2);
+        }
+
+        .match-dot {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+
+        .match-info h4 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 2px;
+        }
+
+        .match-info p {
+            font-size: 0.7rem;
+            color: #4b5563;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+<div class="page-content">
+
+<!-- Navbar -->
+<div class="navbar">
+    <div class="nav-left">
+        <a href="/">👗 Tryvora</a>
+        <span>›</span>
+        <a href="/upload">Upload</a>
+        <span>›</span>
+        <span style="color:#6b7280;">AI Studio</span>
+    </div>
+    <div class="nav-right">
+        <div class="ai-badge">
+            <div class="ai-dot"></div>
+            <span id="pipelineBadge">AI Pipeline</span>
+        </div>
+    </div>
+</div>
+
+<!-- Page Header -->
+<div class="page-header">
+    <h1>✨ AI Try-On Studio</h1>
+    <p>Segmentation → Pose Detection → Cloth Warping → Neural Blending</p>
+</div>
+
+<!-- Studio Grid -->
+<div class="studio-grid">
+
+    <!-- ═══ LEFT: Inputs ═══ -->
+    <div class="panel">
+        <div class="panel-hd">
+            <h3>📁 Inputs</h3>
+            <span id="poseBadge"
+                  style="font-size:0.68rem;
+                         padding:3px 9px;
+                         border-radius:20px;
+                         background:rgba(52,211,153,0.1);
+                         color:#34d399;
+                         border:1px solid rgba(52,211,153,0.15);
+                         font-weight:600;">
+                Loading…
+            </span>
+        </div>
+        <div class="panel-bd">
+
+            <!-- Pipeline info -->
+            <div class="pipeline-card">
+                <h4>AI Pipeline</h4>
+                <div class="pipeline-row">
+                    <span>1️⃣</span>
+                    <span>Shirt Segmentation</span>
+                </div>
+                <div class="pipeline-row">
+                    <span>2️⃣</span>
+                    <span>Pose Heatmap (18 joints)</span>
+                </div>
+                <div class="pipeline-row">
+                    <span>3️⃣</span>
+                    <span>TPS Cloth Warping</span>
+                </div>
+                <div class="pipeline-row">
+                    <span>4️⃣</span>
+                    <span>Neural Blending</span>
+                </div>
+            </div>
+
+            <!-- Person image -->
+            <div class="img-section">
+                <div class="img-label">Your Photo</div>
+                <img class="img-thumb"
+                     src="{{ url_for('static', filename=person_image) }}"
+                     alt="Person">
+                <div class="ready-chip">
+                    <span>●</span> Ready
+                </div>
+            </div>
+
+            <!-- Cloth image -->
+            <div class="img-section">
+                <div class="img-label">Clothing Item</div>
+                <img class="img-thumb"
+                     src="{{ url_for('static', filename=clothing_image) }}"
+                     alt="Clothing"
+                     style="object-fit:contain;background:#060410;">
+                <div class="ready-chip">
+                    <span>●</span> Ready
+                </div>
+            </div>
+
+            <button class="btn-generate"
+                    id="generateBtn"
+                    onclick="startTryOn()">
+                🤖 Run AI Try-On
+            </button>
+
+            <a href="/upload" class="btn-reupload">
+                🔄 Change Images
+            </a>
+
+        </div>
+    </div>
+
+    <!-- ═══ MIDDLE: Result ═══ -->
+    <div class="panel result-col">
+        <div class="panel-hd">
+            <h3>✨ AI Output</h3>
+            <span id="statusBadge"
+                  style="font-size:0.68rem;
+                         padding:3px 9px;
+                         border-radius:20px;
+                         background:rgba(55,65,81,0.5);
+                         color:#6b7280;
+                         font-weight:600;">
+                Waiting
+            </span>
+        </div>
+
+        <div class="result-body">
+
+            <!-- EMPTY -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">🧠</div>
+                <h3>AI result appears here</h3>
+                <p>Click "Run AI Try-On" to start</p>
+            </div>
+
+            <!-- LOADING -->
+            <div class="loading-state" id="loadingState">
+                <div class="ai-brain">
+                    <div class="brain-ring"></div>
+                    <div class="brain-ring"></div>
+                    <div class="brain-ring"></div>
+                    <div class="brain-emoji">🧠</div>
+                </div>
+
+                <div class="loading-title">
+                    AI is processing your look…
+                </div>
+                <div class="loading-subtitle" id="loadingSub">
+                    Starting pipeline…
+                </div>
+
+                <!-- Progress bar -->
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill"
+                         id="progressBar"></div>
+                </div>
+
+                <!-- AI Steps -->
+                <div class="ai-steps">
+                    <div class="ai-step" id="step1">
+                        <span class="step-icon">🔍</span>
+                        <span class="step-text">
+                            Person segmentation
+                        </span>
+                        <div class="step-spinner"></div>
+                        <span class="step-check">✓</span>
+                    </div>
+                    <div class="ai-step" id="step2">
+                        <span class="step-icon">🦴</span>
+                        <span class="step-text">
+                            Pose landmark detection
+                        </span>
+                        <div class="step-spinner"></div>
+                        <span class="step-check">✓</span>
+                    </div>
+                    <div class="ai-step" id="step3">
+                        <span class="step-icon">🗺️</span>
+                        <span class="step-text">
+                            Segmentation map + agnostic
+                        </span>
+                        <div class="step-spinner"></div>
+                        <span class="step-check">✓</span>
+                    </div>
+                    <div class="ai-step" id="step4">
+                        <span class="step-icon">🔄</span>
+                        <span class="step-text">
+                            TPS cloth warping
+                        </span>
+                        <div class="step-spinner"></div>
+                        <span class="step-check">✓</span>
+                    </div>
+                    <div class="ai-step" id="step5">
+                        <span class="step-icon">🎨</span>
+                        <span class="step-text">
+                            Neural blending + post-process
+                        </span>
+                        <div class="step-spinner"></div>
+                        <span class="step-check">✓</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULT -->
+            <div class="result-state" id="resultState">
+                <img id="resultImg" src="" alt="AI Try-On Result">
+
+                <div class="result-meta">
+                    <span class="meta-chip chip-ai"
+                          id="pipelineChip">
+                        🤖 VITON-AI
+                    </span>
+                    <span class="meta-chip chip-time"
+                          id="timeChip">
+                        ⚡ —
+                    </span>
+                    <span class="meta-chip chip-hd">
+                        📐 HD Output
+                    </span>
+                </div>
+
+                <div class="result-btns">
+                    <a id="dlBtn"
+                       href="#"
+                       download="tryvora_ai_result.jpg"
+                       class="rbtn rbtn-dl">
+                        ⬇️ Download
+                    </a>
+                    <a href="/result" class="rbtn rbtn-view">
+                        🖼️ Full View
+                    </a>
+                    <a href="/debug_view"
+                       class="rbtn rbtn-debug">
+                        🔬 Debug View
+                    </a>
+                    <a href="/viewer"
+                       class="rbtn rbtn-3d">
+                        🧊 3D View
+                    </a>
+                </div>
+            </div>
+
+            <!-- ERROR -->
+            <div class="error-box" id="errorBox">
+                <div id="errorMsg">Something went wrong</div>
+                <button onclick="resetUI()">🔄 Try Again</button>
+            </div>
+
+        </div>
+
+        <!-- Compare Slider -->
+        <div class="compare-bar" id="compareBar">
+            <div class="compare-hd">
+                <span>↔️ Drag to compare</span>
+                <span style="color:#1f2937;">
+                    Before / After
+                </span>
+            </div>
+            <div class="cmp-wrap" id="cmpWrap">
+                <img class="cmp-base"
+                     id="cmpBefore"
+                     src="{{ url_for('static', filename=person_image) }}"
+                     alt="Before">
+                <div class="cmp-after-pane" id="cmpAfterPane">
+                    <img id="cmpAfterImg" src="" alt="After">
+                </div>
+                <div class="cmp-handle" id="cmpHandle">
+                    <div class="cmp-circle">⟺</div>
+                </div>
+                <span class="cmp-lbl cmp-lbl-b">Original</span>
+                <span class="cmp-lbl cmp-lbl-a">AI Result</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══ RIGHT: Recommendations ═══ -->
+    <div class="panel rec-col">
+        <div class="panel-hd">
+            <h3>🎨 Style Match</h3>
+        </div>
+        <div class="panel-bd" id="recBody">
+
+            <div class="rec-empty" id="recEmpty">
+                <div style="font-size:2rem;
+                            margin-bottom:8px;
+                            opacity:0.15;">
+                    🎨
+                </div>
+                <p>Run try-on to get outfit recommendations</p>
+            </div>
+
+            <div class="rec-loading" id="recLoading">
+                <div class="skeleton" style="height:65px;"></div>
+                <div class="skeleton" style="height:48px;"></div>
+                <div class="skeleton" style="height:55px;"></div>
+                <div class="skeleton" style="height:55px;"></div>
+            </div>
+
+            <div class="detected-color" id="detectedColor">
+                <div class="color-row">
+                    <div class="color-swatch" id="colorSwatch">
+                    </div>
+                    <div class="color-info">
+                        <h4 id="colorName">—</h4>
+                        <p id="colorHex">—</p>
+                    </div>
+                </div>
+                <div class="style-tip" id="styleTip"></div>
+                <div class="palette-row" id="paletteRow"></div>
+            </div>
+
+            <div id="matchesContainer"></div>
+
+        </div>
+    </div>
+
+</div><!-- end studio-grid -->
+</div><!-- end page-content -->
+
+
+<script>
+// ════════════════════════════════════════════════════════
+// STATE MANAGEMENT
+// ════════════════════════════════════════════════════════
+
+function setDisplay(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = val;
+}
+
+function showState(name) {
+    const states = {
+        empty  : 'emptyState',
+        loading: 'loadingState',
+        result : 'resultState',
+        error  : 'errorBox',
+    };
+
+    // Hide all
+    Object.values(states).forEach(id => setDisplay(id, 'none'));
+
+    // Show target
+    const target = states[name];
+    const disp   = (name === 'loading' || name === 'result')
+                   ? 'flex' : 'block';
+    if (target) setDisplay(target, disp);
+
+    // Update status badge
+    const badge  = document.getElementById('statusBadge');
+    if (!badge) return;
+
+    const map = {
+        empty  : ['Waiting',      '#374151', '#6b7280'],
+        loading: ['Processing…',  'rgba(245,158,11,0.2)', '#fbbf24'],
+        result : ['✅ Complete',   'rgba(52,211,153,0.15)', '#34d399'],
+        error  : ['❌ Error',      'rgba(239,68,68,0.15)',  '#fca5a5'],
+    };
+
+    if (map[name]) {
+        const [label, bg, color] = map[name];
+        badge.textContent      = label;
+        badge.style.background = bg;
+        badge.style.color      = color;
+    }
+}
+
+function resetUI() {
+    setDisplay('errorBox', 'none');
+    showState('empty');
+    const btn = document.getElementById('generateBtn');
+    if (btn) {
+        btn.disabled    = false;
+        btn.textContent = '🤖 Run AI Try-On';
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// PROGRESS BAR
+// ════════════════════════════════════════════════════════
+
+const PROGRESS_TARGETS = [10, 28, 48, 72, 90];
+let   progressInterval = null;
+let   currentProgress  = 0;
+
+function startProgress() {
+    currentProgress = 0;
+    setProgress(0);
+}
+
+function setProgress(pct) {
+    currentProgress = pct;
+    const bar = document.getElementById('progressBar');
+    if (bar) bar.style.width = pct + '%';
+}
+
+function advanceProgressTo(target) {
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+        if (currentProgress >= target) {
+            clearInterval(progressInterval);
+            return;
+        }
+        setProgress(Math.min(currentProgress + 0.8, target));
+    }, 40);
+}
+
+function completeProgress() {
+    if (progressInterval) clearInterval(progressInterval);
+    setProgress(100);
+}
+
+// ════════════════════════════════════════════════════════
+// AI STEP ANIMATIONS
+// ════════════════════════════════════════════════════════
+
+const STEPS = [
+    {
+        id  : 'step1',
+        sub : 'Removing original shirt from photo…',
+        prog: PROGRESS_TARGETS[0]
+    },
+    {
+        id  : 'step2',
+        sub : 'Finding 18 body joint locations…',
+        prog: PROGRESS_TARGETS[1]
+    },
+    {
+        id  : 'step3',
+        sub : 'Building body part segmentation map…',
+        prog: PROGRESS_TARGETS[2]
+    },
+    {
+        id  : 'step4',
+        sub : 'TPS warping cloth to fit your body…',
+        prog: PROGRESS_TARGETS[3]
+    },
+    {
+        id  : 'step5',
+        sub : 'Neural blending + post-processing…',
+        prog: PROGRESS_TARGETS[4]
+    },
+];
+
+const STEP_TIMINGS = [500, 1300, 2400, 3800, 5500];
+let   stepTimers   = [];
+
+function resetSteps() {
+    STEPS.forEach(s => {
+        const el = document.getElementById(s.id);
+        if (el) el.className = 'ai-step';
+    });
+    const sub = document.getElementById('loadingSub');
+    if (sub) sub.textContent = 'Initialising AI pipeline…';
+    startProgress();
+}
+
+function animateSteps() {
+    resetSteps();
+    stepTimers.forEach(t => clearTimeout(t));
+    stepTimers = [];
+
+    STEPS.forEach((step, i) => {
+        // Mark previous done
+        if (i > 0) {
+            const t1 = setTimeout(() => {
+                const prev = document.getElementById(
+                    STEPS[i-1].id
+                );
+                if (prev) prev.className = 'ai-step done';
+            }, STEP_TIMINGS[i]);
+            stepTimers.push(t1);
+        }
+
+        // Activate current
+        const t2 = setTimeout(() => {
+            const cur = document.getElementById(step.id);
+            if (cur) cur.className = 'ai-step active';
+
+            const sub = document.getElementById('loadingSub');
+            if (sub) sub.textContent = step.sub;
+
+            advanceProgressTo(step.prog);
+        }, STEP_TIMINGS[i]);
+        stepTimers.push(t2);
+    });
+}
+
+function markAllDone() {
+    stepTimers.forEach(t => clearTimeout(t));
+    STEPS.forEach(s => {
+        const el = document.getElementById(s.id);
+        if (el) el.className = 'ai-step done';
+    });
+    completeProgress();
+    const sub = document.getElementById('loadingSub');
+    if (sub) sub.textContent = 'Done! Rendering result…';
+}
+
+// ════════════════════════════════════════════════════════
+// PIPELINE STATUS CHECK
+// ════════════════════════════════════════════════════════
+
+function checkPipelineStatus() {
+    fetch('/pipeline_status')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('poseBadge');
+            const pill  = document.getElementById('pipelineBadge');
+
+            if (data.ai_ready) {
+                if (badge) {
+                    badge.textContent      = '🤖 AI Ready';
+                    badge.style.background =
+                        'rgba(52,211,153,0.1)';
+                    badge.style.color      = '#34d399';
+                    badge.style.borderColor=
+                        'rgba(52,211,153,0.15)';
+                }
+                if (pill) pill.textContent = 'VITON Neural Net';
+            } else {
+                if (badge) {
+                    badge.textContent      = '⚙️ OpenCV Mode';
+                    badge.style.background =
+                        'rgba(245,158,11,0.1)';
+                    badge.style.color      = '#fbbf24';
+                    badge.style.borderColor=
+                        'rgba(245,158,11,0.15)';
+                }
+                if (pill) pill.textContent = 'Enhanced OpenCV';
+            }
+        })
+        .catch(() => {});
+}
+
+// ════════════════════════════════════════════════════════
+// RECOMMENDATIONS
+// ════════════════════════════════════════════════════════
+
+function loadRecommendations() {
+    setDisplay('recEmpty',   'none');
+    setDisplay('recLoading', 'flex');
+    setDisplay('detectedColor', 'none');
+
+    const matchCont = document.getElementById('matchesContainer');
+    if (matchCont) matchCont.innerHTML = '';
+
+    fetch('/recommend')
+        .then(r => r.json())
+        .then(data => {
+            setDisplay('recLoading', 'none');
+            if (!data.success) {
+                setDisplay('recEmpty', 'block');
+                return;
+            }
+
+            const d = data.data;
+
+            const sw  = document.getElementById('colorSwatch');
+            const cn  = document.getElementById('colorName');
+            const ch  = document.getElementById('colorHex');
+            const tip = document.getElementById('styleTip');
+            const pr  = document.getElementById('paletteRow');
+
+            if (sw) sw.style.background = d.color_hex;
+            if (cn) cn.textContent =
+                (d.color_emoji || '') + '  ' + d.color_name;
+            if (ch) ch.textContent  = d.color_hex.toUpperCase();
+            if (tip) tip.textContent = '💡 ' + d.style_tip;
+
+            if (pr) {
+                pr.innerHTML = '';
+                (d.palette || []).forEach(hex => {
+                    const dot = document.createElement('div');
+                    dot.className = 'palette-dot';
+                    dot.style.background = hex;
+                    dot.title = hex;
+                    pr.appendChild(dot);
+                });
+            }
+
+            setDisplay('detectedColor', 'block');
+
+            if (matchCont && d.matches?.length) {
+                const title = document.createElement('div');
+                title.className   = 'matches-title';
+                title.textContent = '🤝 Pairs well with';
+                matchCont.appendChild(title);
+
+                d.matches.forEach(m => {
+                    const card = document.createElement('div');
+                    card.className = 'match-card';
+                    card.innerHTML = `
+                        <div class="match-dot"
+                             style="background:${m.color}">
+                            ${m.emoji}
+                        </div>
+                        <div class="match-info">
+                            <h4>${m.item}</h4>
+                            <p>${m.reason}</p>
+                        </div>`;
+                    matchCont.appendChild(card);
+                });
+            }
+        })
+        .catch(() => {
+            setDisplay('recLoading', 'none');
+            setDisplay('recEmpty',   'block');
+        });
+}
+
+// ════════════════════════════════════════════════════════
+// MAIN TRY-ON
+// ════════════════════════════════════════════════════════
+
+function startTryOn() {
+    const btn    = document.getElementById('generateBtn');
+    const errBox = document.getElementById('errorBox');
+
+    if (!btn) return;
+    btn.disabled    = true;
+    btn.textContent = '⏳ AI Running…';
+
+    if (errBox) errBox.style.display = 'none';
+
+    showState('loading');
+    animateSteps();
+    loadRecommendations();
+
+    fetch('/tryon', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    })
+    .then(data => {
+        btn.disabled    = false;
+        btn.textContent = '🤖 Run AI Try-On';
+
+        if (data.success) {
+            markAllDone();
+
+            // Update result image
+            const img   = document.getElementById('resultImg');
+            const dlBtn = document.getElementById('dlBtn');
+            if (img)   img.src    = data.result_url;
+            if (dlBtn) dlBtn.href = data.result_url;
+
+            // Update meta chips
+            const timeChip = document.getElementById('timeChip');
+            const pipChip  = document.getElementById('pipelineChip');
+            if (timeChip && data.elapsed)
+                timeChip.textContent = `⚡ ${data.elapsed}s`;
+            if (pipChip && data.pipeline)
+                pipChip.textContent  = `🤖 ${data.pipeline}`;
+
+            setTimeout(() => {
+                showState('result');
+                showCompareSlider(data.result_url);
+            }, 600);
+
+        } else {
+            showState('error');
+            const errMsg = document.getElementById('errorMsg');
+            if (errMsg) errMsg.innerHTML =
+                '❌ <strong>Error:</strong> ' +
+                (data.error || 'Unknown error') +
+                '<br><small style="opacity:0.65">' +
+                'Check terminal for full details.</small>';
+        }
+    })
+    .catch(err => {
+        btn.disabled    = false;
+        btn.textContent = '🤖 Run AI Try-On';
+        showState('error');
+        const errMsg = document.getElementById('errorMsg');
+        if (errMsg) errMsg.innerHTML =
+            '❌ ' + err.message +
+            '<br><small>Is Flask running? ' +
+            'Check http://localhost:5000</small>';
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// COMPARE SLIDER
+// ════════════════════════════════════════════════════════
+
+function showCompareSlider(url) {
+    const after = document.getElementById('cmpAfterImg');
+    const bar   = document.getElementById('compareBar');
+    if (after) after.src          = url;
+    if (bar)   bar.style.display  = 'block';
+    initSlider();
+}
+
+function initSlider() {
+    const wrap   = document.getElementById('cmpWrap');
+    const after  = document.getElementById('cmpAfterPane');
+    const handle = document.getElementById('cmpHandle');
+    if (!wrap || !after || !handle) return;
+
+    let drag = false;
+
+    const set = p => {
+        p = Math.min(96, Math.max(4, p));
+        after.style.width = p + '%';
+        handle.style.left = p + '%';
+    };
+    set(50);
+
+    const pct = x => {
+        const r = wrap.getBoundingClientRect();
+        return ((x - r.left) / r.width) * 100;
+    };
+
+    handle.addEventListener('mousedown',
+        e => { drag = true; e.preventDefault(); });
+    document.addEventListener('mousemove',
+        e => { if (drag) set(pct(e.clientX)); });
+    document.addEventListener('mouseup',
+        () => { drag = false; });
+    handle.addEventListener('touchstart',
+        () => { drag = true; }, {passive:true});
+    document.addEventListener('touchmove',
+        e => {
+            if (drag) set(pct(e.touches[0].clientX));
+        }, {passive:true});
+    document.addEventListener('touchend',
+        () => { drag = false; });
+    wrap.addEventListener('click',
+        e => { set(pct(e.clientX)); });
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+
+window.addEventListener('load', () => {
+    checkPipelineStatus();
+});
+</script>
+
+</body>
+</html>

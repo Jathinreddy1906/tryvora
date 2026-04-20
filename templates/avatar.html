@@ -1,0 +1,679 @@
+<!-- templates/avatar.html — STEP 1: Avatar Loader -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>Tryvora – 3D Avatar Studio</title>
+
+    <!-- Our CSS -->
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/avatar.css') }}">
+
+    <!-- Three.js r128 core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- GLTFLoader (loads .glb / .gltf files) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <!-- DRACOLoader (for compressed models) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+
+    <!-- ADD in <head> after DRACOLoader script -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js">
+</script>
+</head>
+<body>
+<div class="page-wrap">
+
+    <!-- ══ NAVBAR ══════════════════════════════════════ -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">👗 Tryvora</a>
+        <div class="nav-links">
+            <a href="/"       class="nav-link">Home</a>
+            <a href="/upload" class="nav-link">Upload</a>
+            <a href="/preview"class="nav-link">Try-On</a>
+            <a href="/avatar" class="nav-link active">
+                🧊 Avatar
+            </a>
+            <a href="/viewer" class="nav-link">3D Viewer</a>
+        </div>
+    </nav>
+
+    <!-- ══ MAIN LAYOUT ═════════════════════════════════ -->
+    <div class="main-layout">
+
+        <!-- ── LEFT PANEL ───────────────────────────── -->
+        <div class="panel left-panel">
+
+            <!-- Avatar Status -->
+            <div class="panel-section">
+                <div class="section-label">
+                    System Status
+                </div>
+
+                <div class="avatar-status">
+                    <div class="status-row">
+                        <div class="status-dot loading"
+                             id="status-model">
+                        </div>
+                        <span>3D Model</span>
+                    </div>
+                    <div class="status-row">
+                        <div class="status-dot off"
+                             id="status-rpm">
+                        </div>
+                        <span>Ready Player Me</span>
+                    </div>
+                    <div class="status-row">
+                        <div class="status-dot off"
+                             id="status-texture">
+                        </div>
+                        <span>Cloth Texture</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Avatar -->
+            <div class="panel-section">
+                <div class="section-label">
+                    Create Avatar
+                </div>
+
+                <button class="btn btn-primary"
+                        onclick="openRPMCreator()">
+                    🎨 Open Avatar Creator
+                </button>
+
+                <div style="margin:10px 0;
+                            text-align:center;
+                            font-size:0.72rem;
+                            color:var(--text-dim);">
+                    — or paste GLB URL —
+                </div>
+
+                <div class="url-input-wrap">
+                    <input type="text"
+                           id="avatarUrlInput"
+                           class="url-input"
+                           placeholder="https://models.readyplayer.me/…glb">
+                    <button class="url-load-btn"
+                            onclick="loadFromUrlInput()">
+                        Load
+                    </button>
+                </div>
+
+                <button class="btn btn-ghost"
+                        onclick="loadDefaultAvatar()"
+                        style="margin-top:10px;">
+                    🔄 Load Demo Avatar
+                </button>
+            </div>
+
+            <!-- ADD before the Model Info section -->
+<div class="panel-section">
+    <div class="section-label">
+        Lighting
+    </div>
+
+    <!-- Lighting preset buttons -->
+    <div style="display:flex; flex-direction:column; gap:7px;">
+
+        <button class="btn btn-ghost btn-sm"
+                onclick="setLightPreset('studio')"
+                id="preset-studio"
+                style="justify-content:flex-start;
+                       gap:10px;">
+            <span>💡</span> Studio (default)
+        </button>
+
+        <button class="btn btn-ghost btn-sm"
+                onclick="setLightPreset('warm')"
+                id="preset-warm"
+                style="justify-content:flex-start;
+                       gap:10px;">
+            <span>🌅</span> Warm Sunset
+        </button>
+
+        <button class="btn btn-ghost btn-sm"
+                onclick="setLightPreset('cool')"
+                id="preset-cool"
+                style="justify-content:flex-start;
+                       gap:10px;">
+            <span>❄️</span> Cool Blue
+        </button>
+
+        <button class="btn btn-ghost btn-sm"
+                onclick="setLightPreset('neon')"
+                id="preset-neon"
+                style="justify-content:flex-start;
+                       gap:10px;">
+            <span>🌈</span> Neon Night
+        </button>
+    </div>
+
+    <!-- Exposure slider -->
+    <div style="margin-top:12px;">
+        <div style="display:flex;
+                    justify-content:space-between;
+                    margin-bottom:5px;">
+            <span style="font-size:0.72rem;
+                         color:var(--text-muted);">
+                Exposure
+            </span>
+            <span style="font-size:0.72rem;
+                         color:var(--text-main);"
+                  id="exposureVal">1.1</span>
+        </div>
+        <input type="range"
+               id="exposureSlider"
+               min="0.3" max="2.5"
+               step="0.1" value="1.1"
+               oninput="setExposure(this.value)"
+               style="width:100%;
+                      accent-color:var(--purple);">
+    </div>
+</div>
+            <!-- Model Info -->
+            <div class="panel-section">
+                <div class="section-label">
+                    Model Info
+                </div>
+
+                <div class="info-row">
+                    <span class="info-key">Source</span>
+                    <span class="info-value">
+                        Ready Player Me
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Format</span>
+                    <span class="info-value">GLB / GLTF</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Meshes</span>
+                    <span class="info-value"
+                          id="info-mesh-count">
+                        Loading…
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Avatar ID</span>
+                    <span class="info-value"
+                          id="info-avatar-url">
+                        Demo
+                    </span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="panel-section">
+                <div class="section-label">Quick Links</div>
+                <a href="/preview"
+                   class="btn btn-ghost"
+                   style="margin-bottom:8px;">
+                    ✨ AI Try-On Studio
+                </a>
+                <a href="/debug_view"
+                   class="btn btn-ghost">
+                    🔬 Debug View
+                </a>
+            </div>
+
+        </div>
+        <!-- ── end left panel ── -->
+
+
+        <!-- ── CENTER: 3D CANVAS ─────────────────────── -->
+        <div class="canvas-col">
+
+            <!-- Top label bar -->
+            <div class="canvas-top-bar">
+                <div class="canvas-chip chip-rpm">
+                    Ready Player Me
+                </div>
+                <div class="canvas-chip chip-mode"
+                     id="canvasMode">
+                    Loading…
+                </div>
+            </div>
+
+            <!-- Three.js renders here -->
+            <canvas id="avatarCanvas"></canvas>
+
+            <!-- Loading overlay -->
+            <div class="canvas-loader"
+                 id="canvasLoader">
+                <div class="loader-rings">
+                    <div class="ring ring-1"></div>
+                    <div class="ring ring-2"></div>
+                    <div class="ring ring-3"></div>
+                </div>
+                <div>
+                    <div class="loader-text"
+                         id="loaderText">
+                        Initialising 3D scene…
+                    </div>
+                    <div class="loader-sub">
+                        Ready Player Me avatar system
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom camera controls
+                 (OrbitControls added in Step 4) -->
+            <div class="canvas-bottom">
+                <button class="ctrl-btn"
+                        title="Zoom In"
+                        onclick="zoomIn()">
+                    +
+                </button>
+                <button class="ctrl-btn"
+                        title="Zoom Out"
+                        onclick="zoomOut()">
+                    −
+                </button>
+                <button class="ctrl-btn"
+                        title="Reset Camera"
+                        onclick="resetCamera()">
+                    ⟳
+                </button>
+                <button class="ctrl-btn"
+                        title="Toggle Auto-rotate"
+                        id="autoBtn"
+                        onclick="toggleAutoRotate()">
+                    ▶
+                </button>
+            </div>
+
+        </div>
+        <!-- ── end canvas col ── -->
+
+
+        <!-- ── RIGHT PANEL ───────────────────────────── -->
+        <div class="panel right-panel">
+
+            <!-- Apply Clothing -->
+            <div class="panel-section">
+                <div class="section-label">
+                    Apply Outfit
+                </div>
+
+                <!-- Cloth texture preview -->
+                <div class="texture-preview"
+                     id="texPreview"
+                     onclick="document.getElementById('texFile').click()">
+                    {% if clothing_image %}
+                    <img src="{{ url_for('static',
+                                 filename=clothing_image) }}"
+                         alt="Clothing">
+                    {% else %}
+                    <div class="tex-placeholder">
+                        <div class="icon">👔</div>
+                        <div>Click to select<br>clothing image</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <input type="file"
+                       id="texFile"
+                       accept="image/*"
+                       style="display:none"
+                       onchange="onTextureFileSelect(this)">
+
+                <button class="btn btn-success"
+                        id="applyTextureBtn"
+                        onclick="applyClothingTexture()"
+                        style="margin-top:12px;"
+                        disabled>
+                    👔 Apply to Avatar
+                </button>
+
+                <button class="btn btn-ghost"
+                        onclick="removeClothingTexture()"
+                        style="margin-top:8px;">
+                    ✕ Remove Cloth
+                </button>
+            </div>
+
+            <!-- Try-On result preview -->
+            <div class="panel-section">
+                <div class="section-label">
+                    Try-On Result
+                </div>
+                {% if result_image %}
+                <div style="border-radius:10px;
+                            overflow:hidden;
+                            border:1px solid var(--border);">
+                    <img src="{{ url_for('static',
+                                 filename=result_image) }}"
+                         style="width:100%;display:block;">
+                </div>
+                <a href="/preview"
+                   class="btn btn-primary"
+                   style="margin-top:10px;
+                          text-decoration:none;">
+                    ✨ Back to AI Try-On
+                </a>
+                {% else %}
+                <div style="text-align:center;
+                            padding:20px;
+                            color:var(--text-dim);
+                            font-size:0.78rem;">
+                    <div style="font-size:2rem;
+                                opacity:0.2;
+                                margin-bottom:8px;">
+                        👗
+                    </div>
+                    <p>No result yet.</p>
+                    <a href="/preview"
+                       style="color:var(--purple-lite);
+                              font-size:0.78rem;">
+                        Run AI Try-On first →
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Instructions -->
+            <div class="panel-section">
+                <div class="section-label">How to Use</div>
+                <div style="font-size:0.75rem;
+                            color:var(--text-muted);
+                            line-height:1.7;">
+                    <div>1️⃣ Click <strong
+                         style="color:var(--text-main)">
+                         Open Avatar Creator
+                    </strong></div>
+                    <div>2️⃣ Customise your avatar</div>
+                    <div>3️⃣ Click <strong
+                         style="color:var(--text-main)">
+                         Save
+                    </strong> in the creator</div>
+                    <div>4️⃣ Avatar loads automatically</div>
+                    <div>5️⃣ Apply clothing texture</div>
+                    <div>6️⃣ Drag to rotate 360°</div>
+                </div>
+            </div>
+
+        </div>
+        <!-- ── end right panel ── -->
+
+    </div>
+    <!-- ── end main layout ── -->
+
+</div>
+<!-- ── end page-wrap ── -->
+
+
+<!-- ══ READY PLAYER ME IFRAME OVERLAY ════════════════════ -->
+<div class="rpm-overlay" id="rpmOverlay">
+    <div class="rpm-frame-wrap">
+        <!-- Loading bar while iframe loads -->
+        <div class="rpm-loading-bar" id="rpmLoadingBar"></div>
+
+        <!-- Close button -->
+        <button class="rpm-close"
+                onclick="closeRPMCreator()"
+                title="Close">
+            ✕
+        </button>
+
+        <!-- Ready Player Me iframe -->
+        <iframe id="rpmIframe"
+                class="rpm-iframe"
+                src="about:blank"
+                allow="camera *; microphone *"
+                onload="onRpmIframeLoad()">
+        </iframe>
+    </div>
+</div>
+<!-- ADD this BEFORE the avatar_loader.js script tag -->
+<script src="{{ url_for('static',
+    filename='js/scene_setup.js') }}">
+</script>
+
+<!-- This was already there -->
+<script src="{{ url_for('static',
+    filename='js/avatar_loader.js') }}">
+</script>
+
+<!-- ══ SCRIPTS ════════════════════════════════════════════ -->
+
+<!-- Our avatar loader -->
+<script src="{{ url_for('static', filename='js/avatar_loader.js') }}">
+</script>
+
+<script>
+    // ADD inside the <script> block in avatar.html
+
+// ── Lighting Presets ─────────────────────────────────
+const LIGHT_PRESETS = {
+    studio: {
+        key  : { color: 0xfff5e8, intensity: 1.2 },
+        fill : { color: 0xe8f0ff, intensity: 0.5 },
+        rim  : { color: 0xb088ff, intensity: 0.8 },
+        bg   : 0x080614,
+        fog  : 0x080614,
+    },
+    warm: {
+        key  : { color: 0xffb86c, intensity: 1.4 },
+        fill : { color: 0xff6b35, intensity: 0.4 },
+        rim  : { color: 0xffd700, intensity: 0.7 },
+        bg   : 0x0f0805,
+        fog  : 0x0f0805,
+    },
+    cool: {
+        key  : { color: 0xc8e8ff, intensity: 1.1 },
+        fill : { color: 0x88aaff, intensity: 0.6 },
+        rim  : { color: 0x00cfff, intensity: 1.0 },
+        bg   : 0x050a12,
+        fog  : 0x050a12,
+    },
+    neon: {
+        key  : { color: 0xff00ff, intensity: 0.9 },
+        fill : { color: 0x00ffff, intensity: 0.5 },
+        rim  : { color: 0xff0099, intensity: 1.2 },
+        bg   : 0x030008,
+        fog  : 0x030008,
+    },
+};
+
+function setLightPreset(name) {
+    const preset = LIGHT_PRESETS[name];
+    if (!preset || !window._sceneObjects) return;
+
+    const { lights } = window._sceneObjects;
+
+    // Update lights
+    lights.keyLight.color.set(preset.key.color);
+    lights.keyLight.intensity = preset.key.intensity;
+    lights.fillLight.color.set(preset.fill.color);
+    lights.fillLight.intensity = preset.fill.intensity;
+    lights.rimLight.color.set(preset.rim.color);
+    lights.rimLight.intensity  = preset.rim.intensity;
+
+    // Update background + fog
+    if (State.scene) {
+        State.scene.background = new THREE.Color(preset.bg);
+        State.scene.fog        = new THREE.FogExp2(
+            preset.fog, 0.038
+        );
+    }
+
+    // Update button styles
+    ['studio','warm','cool','neon'].forEach(n => {
+        const btn = document.getElementById(`preset-${n}`);
+        if (!btn) return;
+        btn.style.borderColor = n === name
+            ? 'rgba(167,139,250,0.5)' : '';
+        btn.style.color = n === name
+            ? 'var(--purple-lite)' : '';
+    });
+
+    showToast(`💡 ${name} lighting`, 'info');
+}
+
+// ── Exposure Control ─────────────────────────────────
+function setExposure(val) {
+    if (!State.renderer) return;
+    const v = parseFloat(val);
+    State.renderer.toneMappingExposure = v;
+    const el = document.getElementById('exposureVal');
+    if (el) el.textContent = v.toFixed(1);
+}
+// ── Page-specific code ─────────────────────────────────
+
+// Simple auto-rotate state
+let autoRotate = false;
+let autoRotateSpeed = 0.005;
+
+// Basic camera zoom functions
+// (Full OrbitControls added in Step 4)
+function zoomIn() {
+    if (State.camera) {
+        State.camera.position.z =
+            Math.max(1.5, State.camera.position.z - 0.4);
+    }
+}
+
+function zoomOut() {
+    if (State.camera) {
+        State.camera.position.z =
+            Math.min(8, State.camera.position.z + 0.4);
+    }
+}
+
+function resetCamera() {
+    if (!State.camera) return;
+    State.camera.position.set(0, 1.5, 3.5);
+    State.camera.lookAt(0, 1.0, 0);
+    if (State.avatar) State.avatar.rotation.y = 0;
+    showToast('📷 Camera reset', 'info');
+}
+
+function toggleAutoRotate() {
+    autoRotate = !autoRotate;
+    const btn  = document.getElementById('autoBtn');
+    if (btn) {
+        btn.textContent = autoRotate ? '⏸' : '▶';
+        btn.style.color = autoRotate
+            ? 'var(--purple-lite)' : '';
+    }
+    showToast(
+        autoRotate ? '▶ Auto-rotate on' : '⏸ Paused',
+        'info'
+    );
+}
+
+// Plug auto-rotate into render loop
+// We do this by overriding the render loop after init
+const _origStartLoop = startRenderLoop;
+// (Extended in Step 4 with full OrbitControls)
+
+// Simple drag-to-rotate (basic — replaced in Step 4)
+(function setupBasicDrag() {
+    const canvas = document.getElementById('avatarCanvas');
+    if (!canvas) return;
+
+    let isDragging = false;
+    let prevX      = 0;
+
+    canvas.addEventListener('mousedown', e => {
+        isDragging = true;
+        prevX      = e.clientX;
+    });
+
+    document.addEventListener('mousemove', e => {
+        if (!isDragging || !State.avatar) return;
+        const dx = e.clientX - prevX;
+        State.avatar.rotation.y += dx * 0.012;
+        prevX = e.clientX;
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    // Touch support
+    canvas.addEventListener('touchstart', e => {
+        isDragging = true;
+        prevX = e.touches[0].clientX;
+    }, {passive:true});
+
+    canvas.addEventListener('touchmove', e => {
+        if (!isDragging || !State.avatar) return;
+        const dx = e.touches[0].clientX - prevX;
+        State.avatar.rotation.y += dx * 0.012;
+        prevX = e.touches[0].clientX;
+    }, {passive:true});
+
+    canvas.addEventListener('touchend', () => {
+        isDragging = false;
+    });
+})();
+
+// Auto-rotate in render — patch into clock tick
+setInterval(() => {
+    if (autoRotate && State.avatar) {
+        State.avatar.rotation.y += autoRotateSpeed;
+    }
+}, 16);
+
+
+// ── RPM iframe loaded ──────────────────────────────────
+function onRpmIframeLoad() {
+    const bar = document.getElementById('rpmLoadingBar');
+    if (bar) bar.style.display = 'none';
+}
+
+// ── Texture file select preview ────────────────────────
+function onTextureFileSelect(input) {
+    if (!input.files || !input.files[0]) return;
+    const file   = input.files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = document.getElementById('texPreview');
+        if (preview) {
+            preview.innerHTML =
+                `<img src="${e.target.result}"
+                      alt="Clothing texture">`;
+        }
+        // Store for later use in Step 3
+        window._pendingTexture = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    showToast('👔 Texture ready — click Apply!', 'info');
+}
+
+// Placeholders for Steps 3 & 5
+function applyClothingTexture() {
+    showToast('🔜 Coming in Step 3!', 'info');
+}
+
+function removeClothingTexture() {
+    showToast('🔜 Coming in Step 3!', 'info');
+}
+
+// ── Update canvas mode label ───────────────────────────
+function setCanvasMode(text) {
+    const el = document.getElementById('canvasMode');
+    if (el) el.textContent = text;
+}
+
+// ── INIT ──────────────────────────────────────────────
+window.addEventListener('load', () => {
+    initAvatarSystem();
+    setCanvasMode('Ready Player Me GLB');
+
+    // Pre-fill URL if clothing exists
+    {% if clothing_image %}
+    window._pendingTexture =
+        "{{ url_for('static', filename=clothing_image) }}";
+    {% endif %}
+});
+</script>
+
+</body>
+</html>

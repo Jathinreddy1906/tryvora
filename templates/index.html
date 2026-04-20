@@ -1,0 +1,302 @@
+<!-- templates/index.html — DAY 5 FINAL -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tryvora – Virtual Try-On Fashion</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0f0a1e;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Animated background ── */
+        .bg-gradient {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(120,40,200,0.3) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(60,100,220,0.2) 0%, transparent 55%),
+                radial-gradient(ellipse at 60% 80%, rgba(180,40,140,0.2) 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        .content { position: relative; z-index: 1; }
+
+        /* ── Navbar ── */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .nav-logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-badge {
+            background: rgba(167,139,250,0.15);
+            border: 1px solid rgba(167,139,250,0.3);
+            color: #a78bfa;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        /* ── Hero Section ── */
+        .hero {
+            text-align: center;
+            padding: 80px 20px 60px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-chip {
+            display: inline-block;
+            background: rgba(167,139,250,0.12);
+            border: 1px solid rgba(167,139,250,0.25);
+            color: #c4b5fd;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            margin-bottom: 28px;
+            letter-spacing: 0.3px;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.2rem, 6vw, 3.8rem);
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, #a78bfa, #60a5fa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            max-width: 520px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+
+        /* ── CTA Button ── */
+        .btn-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            text-decoration: none;
+            padding: 18px 44px;
+            border-radius: 50px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            box-shadow: 0 0 40px rgba(124,58,237,0.5);
+            transition: all 0.25s;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 60px rgba(124,58,237,0.7);
+        }
+
+        .btn-arrow {
+            transition: transform 0.2s;
+        }
+        .btn-cta:hover .btn-arrow { transform: translateX(4px); }
+
+        /* ── Feature Cards ── */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
+
+        @media(max-width:640px) {
+            .features { grid-template-columns: 1fr; }
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            padding: 28px 24px;
+            text-align: center;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(167,139,250,0.4);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon { font-size: 2.2rem; margin-bottom: 14px; }
+
+        .feature-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #e2e8f0;
+        }
+
+        .feature-card p {
+            font-size: 0.85rem;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        /* ── How It Works ── */
+        .how-it-works {
+            max-width: 800px;
+            margin: 0 auto 80px;
+            padding: 0 20px;
+            text-align: center;
+        }
+
+        .how-it-works h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: #e2e8f0;
+        }
+
+        .steps-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .step-box {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 20px 18px;
+            width: 140px;
+            text-align: center;
+        }
+
+        .step-num {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin: 0 auto 10px;
+        }
+
+        .step-box p {
+            font-size: 0.82rem;
+            color: #94a3b8;
+        }
+
+        .step-connector {
+            color: #334155;
+            font-size: 1.4rem;
+        }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #334155;
+            font-size: 0.82rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body>
+<div class="bg-gradient"></div>
+<div class="content">
+
+    <!-- Navbar -->
+    <nav>
+        <div class="nav-logo">👗 Tryvora</div>
+        <div class="nav-badge">✨ Virtual Try-On</div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-chip">🤖 Powered by OpenCV + Flask</div>
+        <h1>Try On Any Outfit<br><span>Without Leaving Home</span></h1>
+        <p>Upload your photo and any clothing item.
+           Our AI overlays the outfit on you instantly —
+           no dressing room needed.</p>
+        <a href="/upload" class="btn-cta">
+            Start Your Try-On
+            <span class="btn-arrow">→</span>
+        </a>
+    </section>
+
+    <!-- Feature Cards -->
+    <div class="features">
+        <div class="feature-card">
+            <div class="feature-icon">📸</div>
+            <h3>Upload Your Photo</h3>
+            <p>Use any clear full-body photo. JPG or PNG works perfectly.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">👔</div>
+            <h3>Pick a Clothing Item</h3>
+            <p>Upload any clothing image. PNG with transparency gives best results.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">✨</div>
+            <h3>See the Result</h3>
+            <p>Our AI blends the outfit onto your photo using alpha compositing.</p>
+        </div>
+    </div>
+
+    <!-- How It Works -->
+    <div class="how-it-works">
+        <h2>How It Works</h2>
+        <div class="steps-row">
+            <div class="step-box">
+                <div class="step-num">1</div>
+                <p>Upload<br>your photo</p>
+            </div>
+            <div class="step-connector">→</div>
+            <div class="step-box">
+                <div class="step-num">2</div>
+                <p>Upload<br>clothing</p>
+            </div>
+            <div class="step-connector">→</div>
+            <div class="step-box">
+                <div class="step-num">3</div>
+                <p>AI processes<br>images</p>
+            </div>
+            <div class="step-connector">→</div>
+            <div class="step-box">
+                <div class="step-num">4</div>
+                <p>Download<br>your look</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>Built with Flask + OpenCV + NumPy &nbsp;|&nbsp; Tryvora © 2025</footer>
+</div>
+</body>
+</html>

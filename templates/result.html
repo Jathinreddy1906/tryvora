@@ -1,0 +1,502 @@
+<!-- templates/result.html — DAY 5 FINAL with Compare Slider -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tryvora – Your Result</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f8f7ff;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+
+        /* ── Navbar ── */
+        .navbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            max-width: 1050px;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 0.92rem;
+        }
+        .navbar a {
+            text-decoration: none;
+            color: #7c3aed;
+            font-weight: 600;
+        }
+        .navbar span { color: #d1d5db; }
+
+        /* ── Success Banner ── */
+        .banner {
+            max-width: 1050px;
+            margin: 0 auto 24px auto;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            padding: 16px 28px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .banner-text { font-weight: 600; font-size: 1rem; }
+        .banner-sub  { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+
+        /* ── Main Card ── */
+        .card {
+            background: white;
+            max-width: 1050px;
+            margin: 0 auto;
+            border-radius: 22px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.09);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 30px 40px 0;
+        }
+        .card-header h1 {
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        .card-header p {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid #f3f4f6;
+            padding: 0 40px;
+        }
+
+        .tab {
+            padding: 12px 22px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #9ca3af;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            font-family: inherit;
+        }
+        .tab:hover { color: #7c3aed; }
+        .tab.active {
+            color: #7c3aed;
+            border-bottom-color: #7c3aed;
+        }
+
+        /* ── Tab Content ── */
+        .tab-content { display: none; padding: 30px 40px 40px; }
+        .tab-content.active { display: block; }
+
+        /* ── COMPARE SLIDER ── */
+        .compare-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: ew-resize;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            user-select: none;
+        }
+
+        .compare-wrapper img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* "After" (result) image sits on top, clipped */
+        .compare-after {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            /* width set by JS */
+        }
+        .compare-after img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Slider handle */
+        .slider-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: white;
+            cursor: ew-resize;
+            /* left set by JS */
+        }
+
+        .slider-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px; height: 40px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #7c3aed;
+            font-weight: 700;
+        }
+
+        /* Labels on compare */
+        .compare-label {
+            position: absolute;
+            bottom: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            pointer-events: none;
+        }
+        .label-before {
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+        }
+        .label-after {
+            right: 10px;
+            background: rgba(124,58,237,0.85);
+            color: white;
+        }
+
+        .compare-hint {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.82rem;
+            margin-top: 12px;
+        }
+
+        /* ── SIDE BY SIDE VIEW ── */
+        .side-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        @media(max-width:650px){ .side-grid{ grid-template-columns:1fr; } }
+
+        .side-card {
+            border: 2px solid #f3f4f6;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            background: #fafafa;
+        }
+        .side-card h4 {
+            font-size: 0.82rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        .side-card img {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 10px;
+            object-fit: contain;
+        }
+        .plus-icon {
+            font-size: 1.8rem;
+            color: #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── Action Buttons ── */
+        .actions {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 28px;
+            border-radius: 50px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+        }
+        .btn-download:hover { transform:translateY(-2px); opacity:0.9; }
+
+        .btn-again {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            box-shadow: 0 4px 14px rgba(124,58,237,0.35);
+        }
+        .btn-again:hover { transform:translateY(-2px); opacity:0.9; }
+
+        .btn-new {
+            background: white;
+            color: #7c3aed;
+            border: 2px solid #7c3aed;
+        }
+        .btn-new:hover { background: #f5f3ff; }
+
+        /* ── Tips Box ── */
+        .tips-box {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 14px;
+            padding: 18px 24px;
+            margin-top: 28px;
+        }
+        .tips-box h4 { color: #92400e; font-size: 0.9rem; margin-bottom: 8px; }
+        .tips-box ul { padding-left: 18px; }
+        .tips-box li { color: #b45309; font-size: 0.85rem;
+                       margin-bottom: 5px; line-height:1.5; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <a href="/">👗 Tryvora</a>
+    <span>/</span>
+    <a href="/upload">Upload</a>
+    <span>/</span>
+    <a href="/preview">Preview</a>
+    <span>/</span>
+    <span style="color:#374151;font-weight:600;">Result</span>
+</div>
+
+<!-- Banner -->
+<div class="banner">
+    <div>
+        <div class="banner-text">🎉 Try-On Complete!</div>
+        <div class="banner-sub">Your virtual outfit is ready to download</div>
+    </div>
+    <a href="{{ url_for('static', filename=result_image) }}"
+       download="tryvora_result.jpg"
+       class="btn btn-download" style="padding:10px 22px;font-size:0.85rem;">
+        ⬇️ Download
+    </a>
+</div>
+
+<!-- Main Card -->
+<div class="card">
+    <div class="card-header">
+        <h1>✨ Your Virtual Try-On</h1>
+        <p>Drag the slider to compare before and after</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('compare', this)">
+            ↔️ Compare Slider
+        </button>
+        <button class="tab" onclick="switchTab('sidebyside', this)">
+            🖼️ Side by Side
+        </button>
+        <button class="tab" onclick="switchTab('result', this)">
+            ✨ Result Only
+        </button>
+    </div>
+
+    <!-- TAB 1: Compare Slider -->
+    <div class="tab-content active" id="tab-compare">
+        <div class="compare-wrapper" id="compareBox">
+
+            <!-- BEFORE image (person) — sits underneath -->
+            <img src="{{ url_for('static', filename=person_image) }}"
+                 alt="Before" id="beforeImg">
+
+            <!-- AFTER image (result) — clipped on top -->
+            <div class="compare-after" id="afterPane">
+                <img src="{{ url_for('static', filename=result_image) }}"
+                     alt="After">
+            </div>
+
+            <!-- Drag handle -->
+            <div class="slider-handle" id="sliderHandle">
+                <div class="slider-circle">⟺</div>
+            </div>
+
+            <!-- Labels -->
+            <span class="compare-label label-before">Before</span>
+            <span class="compare-label label-after">After</span>
+        </div>
+        <p class="compare-hint">👆 Drag left/right to compare</p>
+    </div>
+
+    <!-- TAB 2: Side by Side -->
+    <div class="tab-content" id="tab-sidebyside">
+        <div class="side-grid">
+            <div class="side-card">
+                <h4>📸 Your Photo</h4>
+                <img src="{{ url_for('static', filename=person_image) }}"
+                     alt="Person">
+            </div>
+            <div class="side-card" style="border-color:#e9d5ff;background:#faf5ff;">
+                <h4>👔 Clothing</h4>
+                <img src="{{ url_for('static', filename=clothing_image) }}"
+                     alt="Clothing">
+            </div>
+            <div class="side-card" style="border-color:#7c3aed;background:#f5f3ff;">
+                <h4>✨ Result</h4>
+                <img src="{{ url_for('static', filename=result_image) }}"
+                     alt="Result">
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Result Only -->
+    <div class="tab-content" id="tab-result">
+        <div style="text-align:center;">
+            <img src="{{ url_for('static', filename=result_image) }}"
+                 alt="Result"
+                 style="max-width:420px; width:100%;
+                        border-radius:16px;
+                        box-shadow:0 8px 30px rgba(0,0,0,0.15);">
+        </div>
+    </div>
+
+    <!-- Action Buttons (always visible) -->
+    <div style="padding: 0 40px 40px;">
+        <div class="actions">
+            <a href="{{ url_for('static', filename=result_image) }}"
+               download="tryvora_result.jpg"
+               class="btn btn-download">
+                ⬇️ Download Result
+            </a>
+            <a href="/preview" class="btn btn-again">🔁 Try Again</a>
+            <a href="/upload"  class="btn btn-new">📤 New Images</a>
+        </div>
+
+        <!-- Tips -->
+        <div class="tips-box">
+            <h4>💡 Want Better Results?</h4>
+            <ul>
+                <li>Use a <strong>front-facing, full-body</strong> photo with a plain background</li>
+                <li>Clothing PNG with <strong>transparent background</strong> gives cleanest overlay</li>
+                <li>Good lighting in your photo = much better blending</li>
+                <li>Try tops, jackets, and shirts — they work best with this system</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ─── TAB SWITCHING ─────────────────────────────────────
+    function switchTab(name, btn) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        // Remove active from all tab buttons
+        document.querySelectorAll('.tab').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        // Show selected
+        document.getElementById('tab-' + name).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // ─── COMPARE SLIDER ────────────────────────────────────
+    (function() {
+        const box    = document.getElementById('compareBox');
+        const after  = document.getElementById('afterPane');
+        const handle = document.getElementById('sliderHandle');
+
+        let isDragging = false;
+        let startPercent = 50; // start at 50%
+
+        function setSlider(percent) {
+            // Clamp between 2% and 98%
+            percent = Math.min(98, Math.max(2, percent));
+            after.style.width  = percent + '%';
+            handle.style.left  = percent + '%';
+        }
+
+        // Initialize at 50%
+        setSlider(50);
+
+        function getPercent(clientX) {
+            const rect = box.getBoundingClientRect();
+            return ((clientX - rect.left) / rect.width) * 100;
+        }
+
+        // Mouse events
+        handle.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            setSlider(getPercent(e.clientX));
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+
+        // Touch events (mobile)
+        handle.addEventListener('touchstart', function(e) {
+            isDragging = true;
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+            setSlider(getPercent(e.touches[0].clientX));
+        }, { passive: true });
+
+        document.addEventListener('touchend', function() {
+            isDragging = false;
+        });
+
+        // Also allow clicking anywhere on the box to jump slider
+        box.addEventListener('click', function(e) {
+            setSlider(getPercent(e.clientX));
+        });
+    })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+flask
+opencv-python
+numpy
+pillow
+mediapipe
+scipy
+torch
+torchvision
+requests
+tqdm
+gdown

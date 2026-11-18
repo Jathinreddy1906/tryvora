@@ -1,5 +1,7 @@
 # Tryvora
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Jathinreddy1906/tryvora/tree/jathinreddy1906-project-deployment)
+
 Tryvora is a Flask virtual outfit preview app. The web app processes photos on
 the server with its local OpenCV pipeline; it does not send uploaded photos to
 external image-generation services.

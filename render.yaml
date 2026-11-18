@@ -3,6 +3,7 @@ services:
     name: tryvora
     runtime: python
     plan: free
+    autoDeployTrigger: off
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --workers 1 --threads 2 --timeout 180 --bind 0.0.0.0:$PORT app:app
     healthCheckPath: /healthz

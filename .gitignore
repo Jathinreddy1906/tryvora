@@ -4,3 +4,7 @@ __pycache__/
 api_debug.log
 groq_output.txt
 .env
+instance/
+static/uploads/
+static/outputs/
+static/full_outputs/

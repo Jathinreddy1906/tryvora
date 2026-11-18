@@ -1,6 +1,8 @@
+import os
+api_key = os.environ["NANOBANANA_API_KEY"]
 import requests
 taskId = "6a067034d929fbffe4bf9479214918f4"
-headers = {"Authorization": "Bearer bf727677774148425720f24b229ae9e9"}
+headers = {"Authorization": f"Bearer {api_key}"}
 endpoints = [
     f"https://api.nanobananaapi.ai/api/v1/nanobanana/result/{taskId}",
     f"https://api.nanobananaapi.ai/api/v1/nanobanana/status/{taskId}",

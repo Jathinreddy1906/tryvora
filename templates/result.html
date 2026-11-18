@@ -311,7 +311,7 @@
         <div class="banner-text">🎉 Try-On Complete!</div>
         <div class="banner-sub">Your virtual outfit is ready to download</div>
     </div>
-    <a href="{{ url_for('static', filename=result_image) }}"
+    <a href="{{ url_for('private_media', file_type='outputs', filename=result_image) }}"
        download="tryvora_result.jpg"
        class="btn btn-download" style="padding:10px 22px;font-size:0.85rem;">
         ⬇️ Download
@@ -343,12 +343,12 @@
         <div class="compare-wrapper" id="compareBox">
 
             <!-- BEFORE image (person) — sits underneath -->
-            <img src="{{ url_for('static', filename=person_image) }}"
+            <img src="{{ url_for('private_media', file_type='uploads', filename=person_image) }}"
                  alt="Before" id="beforeImg">
 
             <!-- AFTER image (result) — clipped on top -->
             <div class="compare-after" id="afterPane">
-                <img src="{{ url_for('static', filename=result_image) }}"
+                <img src="{{ url_for('private_media', file_type='outputs', filename=result_image) }}"
                      alt="After">
             </div>
 
@@ -369,17 +369,17 @@
         <div class="side-grid">
             <div class="side-card">
                 <h4>📸 Your Photo</h4>
-                <img src="{{ url_for('static', filename=person_image) }}"
+                <img src="{{ url_for('private_media', file_type='uploads', filename=person_image) }}"
                      alt="Person">
             </div>
             <div class="side-card" style="border-color:#e9d5ff;background:#faf5ff;">
                 <h4>👔 Clothing</h4>
-                <img src="{{ url_for('static', filename=clothing_image) }}"
+                <img src="{{ url_for('private_media', file_type='uploads', filename=clothing_image) }}"
                      alt="Clothing">
             </div>
             <div class="side-card" style="border-color:#7c3aed;background:#f5f3ff;">
                 <h4>✨ Result</h4>
-                <img src="{{ url_for('static', filename=result_image) }}"
+                <img src="{{ url_for('private_media', file_type='outputs', filename=result_image) }}"
                      alt="Result">
             </div>
         </div>
@@ -388,7 +388,7 @@
     <!-- TAB 3: Result Only -->
     <div class="tab-content" id="tab-result">
         <div style="text-align:center;">
-            <img src="{{ url_for('static', filename=result_image) }}"
+            <img src="{{ url_for('private_media', file_type='outputs', filename=result_image) }}"
                  alt="Result"
                  style="max-width:420px; width:100%;
                         border-radius:16px;
@@ -399,7 +399,7 @@
     <!-- Action Buttons (always visible) -->
     <div style="padding: 0 40px 40px;">
         <div class="actions">
-            <a href="{{ url_for('static', filename=result_image) }}"
+            <a href="{{ url_for('private_media', file_type='outputs', filename=result_image) }}"
                download="tryvora_result.jpg"
                class="btn btn-download">
                 ⬇️ Download Result

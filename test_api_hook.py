@@ -1,8 +1,8 @@
+import os
 import requests
 import json
 import time
-
-api_key = "bf727677774148425720f24b229ae9e9"
+api_key = os.environ["NANOBANANA_API_KEY"]
 external_url = "https://api.nanobananaapi.ai/api/v1/nanobanana/generate"
 
 webhook_init = requests.post("https://webhook.site/token")

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tryvora AI – Try On Studio</title>
+    <title>Tryvora – Try-On Studio</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -845,20 +845,20 @@
         <span>›</span>
         <a href="/upload">Upload</a>
         <span>›</span>
-        <span style="color:#6b7280;">AI Studio</span>
+        <span style="color:#6b7280;">Try-On Studio</span>
     </div>
     <div class="nav-right">
         <div class="ai-badge">
             <div class="ai-dot"></div>
-            <span id="pipelineBadge">AI Pipeline</span>
+            <span id="pipelineBadge">Local Processing</span>
         </div>
     </div>
 </div>
 
 <!-- Page Header -->
 <div class="page-header">
-    <h1>✨ AI Try-On Studio</h1>
-    <p>Segmentation → Pose Detection → Cloth Warping → Neural Blending</p>
+    <h1>✨ Try-On Studio</h1>
+    <p>Private, server-side image processing with OpenCV</p>
 </div>
 
 <!-- Studio Grid -->
@@ -883,22 +883,22 @@
 
             <!-- Pipeline info -->
             <div class="pipeline-card">
-                <h4>AI Pipeline</h4>
+                <h4>Local OpenCV Pipeline</h4>
                 <div class="pipeline-row">
                     <span>1️⃣</span>
                     <span>Shirt Segmentation</span>
                 </div>
                 <div class="pipeline-row">
                     <span>2️⃣</span>
-                    <span>Pose Heatmap (18 joints)</span>
+                    <span>Person Region Detection</span>
                 </div>
                 <div class="pipeline-row">
                     <span>3️⃣</span>
-                    <span>TPS Cloth Warping</span>
+                    <span>Clothing Placement</span>
                 </div>
                 <div class="pipeline-row">
                     <span>4️⃣</span>
-                    <span>Neural Blending</span>
+                    <span>Image Blending</span>
                 </div>
             </div>
 
@@ -906,7 +906,7 @@
             <div class="img-section">
                 <div class="img-label">Your Photo</div>
                 <img class="img-thumb"
-                     src="{{ url_for('static', filename=person_image) }}"
+                     src="{{ url_for('private_media', file_type='uploads', filename=person_image) }}"
                      alt="Person">
                 <div class="ready-chip">
                     <span>●</span> Ready
@@ -917,7 +917,7 @@
             <div class="img-section">
                 <div class="img-label">Clothing Item</div>
                 <img class="img-thumb"
-                     src="{{ url_for('static', filename=clothing_image) }}"
+                     src="{{ url_for('private_media', file_type='uploads', filename=clothing_image) }}"
                      alt="Clothing"
                      style="object-fit:contain;background:#060410;">
                 <div class="ready-chip">
@@ -928,7 +928,7 @@
             <button class="btn-generate"
                     id="generateBtn"
                     onclick="startTryOn()">
-                🤖 Run AI Try-On
+                ✨ Create Preview
             </button>
 
             <a href="/upload" class="btn-reupload">
@@ -941,7 +941,7 @@
     <!-- ═══ MIDDLE: Result ═══ -->
     <div class="panel result-col">
         <div class="panel-hd">
-            <h3>✨ AI Output</h3>
+            <h3>✨ Try-On Output</h3>
             <span id="statusBadge"
                   style="font-size:0.68rem;
                          padding:3px 9px;
@@ -958,8 +958,8 @@
             <!-- EMPTY -->
             <div class="empty-state" id="emptyState">
                 <div class="empty-icon">🧠</div>
-                <h3>AI result appears here</h3>
-                <p>Click "Run AI Try-On" to start</p>
+                <h3>Your preview appears here</h3>
+                <p>Click "Create Preview" to start</p>
             </div>
 
             <!-- LOADING -->
@@ -972,7 +972,7 @@
                 </div>
 
                 <div class="loading-title">
-                    AI is processing your look…
+                    Creating your local preview…
                 </div>
                 <div class="loading-subtitle" id="loadingSub">
                     Starting pipeline…
@@ -1013,7 +1013,7 @@
                     <div class="ai-step" id="step4">
                         <span class="step-icon">🔄</span>
                         <span class="step-text">
-                            TPS cloth warping
+                            Clothing placement
                         </span>
                         <div class="step-spinner"></div>
                         <span class="step-check">✓</span>
@@ -1021,7 +1021,7 @@
                     <div class="ai-step" id="step5">
                         <span class="step-icon">🎨</span>
                         <span class="step-text">
-                            Neural blending + post-process
+                            OpenCV blending + post-process
                         </span>
                         <div class="step-spinner"></div>
                         <span class="step-check">✓</span>
@@ -1031,12 +1031,12 @@
 
             <!-- RESULT -->
             <div class="result-state" id="resultState">
-                <img id="resultImg" src="" alt="AI Try-On Result">
+                <img id="resultImg" src="" alt="Try-On Result">
 
                 <div class="result-meta">
                     <span class="meta-chip chip-ai"
                           id="pipelineChip">
-                        🤖 VITON-AI
+                        ⚙️ Enhanced-OpenCV
                     </span>
                     <span class="meta-chip chip-time"
                           id="timeChip">
@@ -1087,7 +1087,7 @@
             <div class="cmp-wrap" id="cmpWrap">
                 <img class="cmp-base"
                      id="cmpBefore"
-                     src="{{ url_for('static', filename=person_image) }}"
+                     src="{{ url_for('private_media', file_type='uploads', filename=person_image) }}"
                      alt="Before">
                 <div class="cmp-after-pane" id="cmpAfterPane">
                     <img id="cmpAfterImg" src="" alt="After">
@@ -1096,7 +1096,7 @@
                     <div class="cmp-circle">⟺</div>
                 </div>
                 <span class="cmp-lbl cmp-lbl-b">Original</span>
-                <span class="cmp-lbl cmp-lbl-a">AI Result</span>
+                <span class="cmp-lbl cmp-lbl-a">Try-On Result</span>
             </div>
         </div>
 
@@ -1199,7 +1199,7 @@ function resetUI() {
     const btn = document.getElementById('generateBtn');
     if (btn) {
         btn.disabled    = false;
-        btn.textContent = '🤖 Run AI Try-On';
+        btn.textContent = '✨ Create Preview';
     }
 }
 
@@ -1250,7 +1250,7 @@ const STEPS = [
     },
     {
         id  : 'step2',
-        sub : 'Finding 18 body joint locations…',
+        sub : 'Detecting the person region…',
         prog: PROGRESS_TARGETS[1]
     },
     {
@@ -1260,12 +1260,12 @@ const STEPS = [
     },
     {
         id  : 'step4',
-        sub : 'TPS warping cloth to fit your body…',
+        sub : 'Placing the clothing image…',
         prog: PROGRESS_TARGETS[3]
     },
     {
         id  : 'step5',
-        sub : 'Neural blending + post-processing…',
+        sub : 'Blending the preview…',
         prog: PROGRESS_TARGETS[4]
     },
 ];
@@ -1279,7 +1279,7 @@ function resetSteps() {
         if (el) el.className = 'ai-step';
     });
     const sub = document.getElementById('loadingSub');
-    if (sub) sub.textContent = 'Initialising AI pipeline…';
+    if (sub) sub.textContent = 'Preparing local image processing…';
     startProgress();
 }
 
@@ -1336,27 +1336,16 @@ function checkPipelineStatus() {
             const badge = document.getElementById('poseBadge');
             const pill  = document.getElementById('pipelineBadge');
 
-            if (data.ai_ready) {
-                if (badge) {
-                    badge.textContent      = '🤖 AI Ready';
-                    badge.style.background =
-                        'rgba(52,211,153,0.1)';
-                    badge.style.color      = '#34d399';
-                    badge.style.borderColor=
-                        'rgba(52,211,153,0.15)';
-                }
-                if (pill) pill.textContent = 'VITON Neural Net';
-            } else {
-                if (badge) {
-                    badge.textContent      = '⚙️ OpenCV Mode';
-                    badge.style.background =
-                        'rgba(245,158,11,0.1)';
-                    badge.style.color      = '#fbbf24';
-                    badge.style.borderColor=
-                        'rgba(245,158,11,0.15)';
-                }
-                if (pill) pill.textContent = 'Enhanced OpenCV';
+            if (badge) {
+                badge.textContent      = '⚙️ OpenCV Mode';
+                badge.style.background =
+                    'rgba(245,158,11,0.1)';
+                badge.style.color      = '#fbbf24';
+                badge.style.borderColor=
+                    'rgba(245,158,11,0.15)';
             }
+            if (pill)
+                pill.textContent = data.pipeline || 'Enhanced-OpenCV';
         })
         .catch(() => {});
 }
@@ -1447,7 +1436,7 @@ function startTryOn() {
 
     if (!btn) return;
     btn.disabled    = true;
-    btn.textContent = '⏳ AI Running…';
+    btn.textContent = '⏳ Creating preview…';
 
     if (errBox) errBox.style.display = 'none';
 
@@ -1465,7 +1454,7 @@ function startTryOn() {
     })
     .then(data => {
         btn.disabled    = false;
-        btn.textContent = '🤖 Run AI Try-On';
+        btn.textContent = '✨ Create Preview';
 
         if (data.success) {
             markAllDone();
@@ -1501,7 +1490,7 @@ function startTryOn() {
     })
     .catch(err => {
         btn.disabled    = false;
-        btn.textContent = '🤖 Run AI Try-On';
+        btn.textContent = '✨ Create Preview';
         showState('error');
         const errMsg = document.getElementById('errorMsg');
         if (errMsg) errMsg.innerHTML =

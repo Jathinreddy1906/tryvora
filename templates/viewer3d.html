@@ -440,7 +440,8 @@
             <h3>📸 Your Try-On Result</h3>
             {% if result_image %}
                 <div class="result-img-box">
-                    <img src="{{ url_for('static',
+                    <img src="{{ url_for('private_media',
+                                        file_type='outputs',
                                         filename=result_image) }}"
                          alt="Result">
                 </div>
@@ -514,7 +515,9 @@
                     ✨ New Try-On
                 </a>
                 {% if result_image %}
-                <a href="{{ url_for('static', filename=result_image) }}"
+                <a href="{{ url_for('private_media',
+                                    file_type='outputs',
+                                    filename=result_image) }}"
                    download="tryvora_result.jpg"
                    class="abtn abtn-secondary">
                     ⬇️ Download Result

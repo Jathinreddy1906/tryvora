@@ -1,11 +1,6 @@
-flask
-opencv-python
+Flask
+gunicorn
 numpy
 pillow
-mediapipe
-scipy
-torch
-torchvision
-requests
-tqdm
-gdown
+mediapipe==0.10.21
+opencv-contrib-python

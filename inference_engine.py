@@ -1,15 +1,13 @@
 # inference_engine.py
 # ─────────────────────────────────────────────────────────
-# STEP 4: Full AI Inference Pipeline
+# STEP 4: Local Try-On Pipeline
 #
 # This file is the BRAIN that connects:
-#   segmentation → input prep → VITON model → output
+#   segmentation → input prep → OpenCV rendering → output
 #
 # Beginner note:
-#   "Inference" = using a trained AI model to
-#   make predictions on NEW data (your photo).
-#   Training took weeks on thousands of images.
-#   Inference takes seconds on one image!
+#   The web pipeline runs locally and does not send photos
+#   to third-party image-generation services.
 # ─────────────────────────────────────────────────────────
 
 import cv2
@@ -20,16 +18,12 @@ import time
 # Our modules from previous steps
 from segmentation      import segment_and_remove_shirt
 from input_preparator  import prepare_all_inputs
-from viton_model       import get_viton_manager
 
 
 # ─────────────────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────────────────
 
-OUTPUT_DIR   = 'static/outputs'
-VITON_W      = 192
-VITON_H      = 256
 
 
 # ═════════════════════════════════════════════════════════
@@ -380,18 +374,17 @@ def save_result_with_metadata(result_img, output_path,
 # This is what app.py calls
 # ═════════════════════════════════════════════════════════
 
-def run_ai_tryon(person_path, clothing_path, output_path):
+def run_ai_tryon(person_path, clothing_path, output_path,
+                 debug_output_dir=None):
     """
-    MASTER FUNCTION — Full AI try-on pipeline.
+    MASTER FUNCTION — Local OpenCV try-on pipeline.
 
     Called by app.py → image_processor.py → here.
 
     Pipeline:
       1. Segment person + remove shirt
       2. Prepare all VITON inputs
-      3. Try AI model inference
-         → If AI works: use AI result
-         → If AI fails: use enhanced OpenCV fallback
+      3. Generate a local OpenCV try-on preview
       4. Post-process result
       5. Add watermark
       6. Save output
@@ -400,6 +393,10 @@ def run_ai_tryon(person_path, clothing_path, output_path):
     """
     start_time = time.time()
     pipeline_used = 'unknown'
+    debug_output_dir = (
+        debug_output_dir or os.path.dirname(output_path) or '.'
+    )
+    os.makedirs(debug_output_dir, exist_ok=True)
 
     print("\n" + "═"*54)
     print("   🚀 TRYVORA AI INFERENCE ENGINE")
@@ -433,7 +430,8 @@ def run_ai_tryon(person_path, clothing_path, output_path):
         try:
             person_clean, shirt_mask, seg_landmarks = \
                 segment_and_remove_shirt(
-                    person_path, save_debug=True
+                    person_path, save_debug=True,
+                    output_dir=debug_output_dir
                 )
             print("[✓] Shirt removal successful")
         except Exception as e:
@@ -451,315 +449,20 @@ def run_ai_tryon(person_path, clothing_path, output_path):
                 clothing_path,
                 shirt_mask = shirt_mask,
                 landmarks  = seg_landmarks,
-                save_debug = True
+                save_debug = True,
+                output_dir = debug_output_dir
             )
             print("[✓] Inputs prepared")
         except Exception as e:
             print(f"[!] Input prep failed: {e}")
             viton_inputs = None
 
-        # ── STEP 3: AI Model Inference ────────────────────
-        print("\n[STEP 3] Running AI Model")
-        ai_result    = None
+        # User photos stay on this server; the try-on runs locally.
+        print("\n[STEP 3] Using local OpenCV Try-On (no external image uploads)")
+        ai_result = None
         ai_succeeded = False
 
-        try:
-            manager = get_viton_manager()
-
-            if manager is not None and manager.loaded:
-                print("[~] VITON model available — running inference")
-
-                # Use agnostic image as person input
-                person_input = (
-                    viton_inputs['agnostic']
-                    if viton_inputs else person_clean
-                )
-
-                # Handle cloth image channels
-                if (len(cloth_raw.shape) == 3 and
-                        cloth_raw.shape[2] == 4):
-                    cloth_input = cloth_raw[:, :, :3]
-                else:
-                    cloth_input = cloth_raw
-
-                # Resize mask if needed
-                use_mask = shirt_mask
-                if use_mask is None and viton_inputs:
-                    seg = viton_inputs['segmap']
-                    use_mask = (
-                        (seg == 3).astype(np.uint8) * 255
-                    )
-                    use_mask = cv2.resize(
-                        use_mask, (orig_w, orig_h),
-                        interpolation=cv2.INTER_NEAREST
-                    )
-                print("[!] Local inference ABORTED by user request.")
-                ai_result = None # Skipping local AI entirely!
-
-                # --- ABORT LOCAL OUTPUT & USE EXTERNAL API ---
-                print("[!] Calling external API (Nano Banana) to serve as main output...")
-                import requests
-                import numpy as np
-
-                # NOTE: nanobananaapi.ai Integration
-                api_key = os.environ["NANOBANANA_API_KEY"]
-                external_url = "https://api.nanobananaapi.ai/api/v1/nanobanana/generate"
-                
-                try:
-                    import base64
-                    with open(person_path, "rb") as f:
-                        person_b64 = base64.b64encode(f.read()).decode("utf-8")
-                    with open(clothing_path, "rb") as f:
-                        cloth_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-                    # Generate dynamic webhook receiver
-                    webhook_init = requests.post("https://webhook.site/token")
-                    uuid_str = webhook_init.json()["uuid"]
-                    callBackUrl = f"https://webhook.site/{uuid_str}"
-                    poll_url = f"https://webhook.site/token/{uuid_str}/requests"
-                    print(f"[~] Generated dynamic proxy webhook: {callBackUrl}")
-
-                    # --- 1. GROQ API CLOTHING DESCRIPTION ---
-                    groq_key = os.environ["GROQ_API_KEY"]
-                    groq_payload = {
-                        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-                        "messages": [{
-                            "role": "user",
-                            "content": [
-                                { "type": "text", "text": "Analyze this clothing item in extreme detail. Describe its texture, lining, color, shape, cut, and style. Output ONLY a raw JSON object containing exactly one key 'prompt' with your ultra-detailed description as the value." },
-                                { "type": "image_url", "image_url": { "url": f"data:image/jpeg;base64,{cloth_b64}" } }
-                            ]
-                        }]
-                    }
-                    print("[~] Hitting Groq API for clothing analysis...")
-                    groq_res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}, json=groq_payload, timeout=30)
-                    
-                    try:
-                        import datetime
-                        with open("api_debug.log", "a", encoding="utf-8") as log_f:
-                            log_f.write(f"\n[{datetime.datetime.now()}] --- GROQ API LOG ---\n")
-                            log_f.write(f"Status Code: {groq_res.status_code}\n")
-                            log_f.write(f"Response: {groq_res.text[:2000]}\n")
-                            log_f.write("-" * 50 + "\n")
-                    except Exception: pass
-                    
-                    cloth_desc = "the specific clothing item"
-                    if groq_res.status_code == 200:
-                        try:
-                            import json
-                            raw_content = groq_res.json()['choices'][0]['message']['content'].strip()
-                            if raw_content.startswith('```'):
-                                # Remove the opening row (e.g. ```json or just ```)
-                                raw_content = raw_content.split('\n', 1)[-1]
-                            if raw_content.endswith('```'):
-                                # Remove the closing ```
-                                raw_content = raw_content.rsplit('\n', 1)[0]
-                                
-                            cloth_desc = json.loads(raw_content.strip())['prompt']
-                        except Exception as ge:
-                            print(f"[!] Groq parsing failed: {ge}")
-                            try:
-                                import datetime
-                                with open("api_debug.log", "a", encoding="utf-8") as log_f:
-                                    log_f.write(f"\n[{datetime.datetime.now()}] --- GROQ PARSING ERROR ---\n")
-                                    log_f.write(f"Exception: {ge}\n")
-                                    log_f.write(f"Raw Content: {raw_content}\n")
-                            except Exception: pass
-                            raise Exception("Groq failed to parse description. Aborting Generation.")
-                    else:
-                        raise Exception(f"Groq API failed with status {groq_res.status_code}. Aborting Generation.")
-                    
-                    if cloth_desc == "the specific clothing item":
-                        raise Exception("Groq fallback description triggered. Aborting Generation.")
-                    
-                    print(f"[✓] Groq resolved clothing description: {cloth_desc[:100]}...")
-
-                    # --- 2. NANOBANANA VIRTUAL TRY-ON ---
-                    print("[~] Securely uploading images to temporary CDN for Nano Banana...")
-                    def upload_to_catbox(file_p):
-                        with open(file_p, "rb") as f2:
-                            r_cat = requests.post("https://catbox.moe/user/api.php", data={"reqtype": "fileupload"}, files={"fileToUpload": f2})
-                        if r_cat.status_code == 200:
-                            return r_cat.text.strip()
-                        raise Exception("Failed CDN image upload")
-                        
-                    person_url = upload_to_catbox(person_path)
-                    cloth_url = upload_to_catbox(clothing_path)
-                    print(f"    -> Hosted successfully: {person_url}, {cloth_url}")
-                    
-                    payload = {
-                        "prompt": f"Virtual try on. A highly realistic portrait photo of this exact person wearing {cloth_desc}. Extremely natural body mapping. i want full photo of the person do not cut off anything. Keep the person and everything other than the cloth the exact same. Change only the clothes. No changing facial features or body proportions.",
-                        "numImages": 1,
-                        "type": "IMAGETOIAMGE",
-                        "image_size": "9:16",
-                        "imageUrls": [person_url, cloth_url],
-                        "callBackUrl": callBackUrl
-                    }
-                    
-                    headers = {
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
-                    }
-                    print("[~] Sending request to api.nanobananaapi.ai...")
-                    response = requests.post(external_url, headers=headers, json=payload, timeout=30)
-                    
-                    # ── Added Persistent Logging ──
-                    try:
-                        import datetime
-                        with open("api_debug.log", "a", encoding="utf-8") as log_f:
-                            log_f.write(f"\n[{datetime.datetime.now()}] --- NANO BANANA LOG ---\n")
-                            log_f.write(f"Endpoint: {external_url}\n")
-                            log_f.write(f"Payload Prompt: {payload['prompt']}\n")
-                            log_f.write(f"Payload Images Passed (IMAGETOIAMGE): {len(payload['imageUrls'])} imageUrls data URIs\n")
-                            log_f.write(f"Status Code: {response.status_code}\n")
-                            log_f.write(f"Response: {response.text[:2000]}\n")
-                            log_f.write("-" * 50 + "\n")
-                    except Exception:
-                        pass
-
-                    # --- SAVE GROQ OUTPUT TO BACKEND ---
-                    try:
-                        with open("groq_output.txt", "w", encoding="utf-8") as gf:
-                            gf.write(cloth_desc)
-                    except Exception: pass
-
-                    # ── Added Debugging Output ──
-                    print(f"[~] API Status Code: {response.status_code}")
-                    if response.status_code != 200:
-                        print(f"[!] API Error Data: {response.text[:500]}")
-                        
-                    if response.status_code == 200:
-                        print("[✓] External API triggered!")
-                        
-                        external_img = None
-                        try:
-                            resp_json = response.json()
-                            
-                            if resp_json.get('data') and isinstance(resp_json['data'], dict) and 'taskId' in resp_json['data']:
-                                print("[~] Waiting for asynchronous webhook result (Increased Polling limit to 3 minutes)...")
-                                
-                                webhook_content = None
-                                # Wait up to 280 seconds for the webhook to receive the image
-                                for _ in range(140):
-                                    time.sleep(2)
-                                    poll_resp = requests.get(poll_url)
-                                    if poll_resp.status_code == 200:
-                                        poll_data = poll_resp.json()
-                                        if poll_data.get('data') and len(poll_data['data']) > 0:
-                                            webhook_content = poll_data['data'][0]['content']
-                                            print("\n[✓] Webhook received the generated image!")
-                                            break
-                                    print(".", end="", flush=True)
-                                
-                                if webhook_content:
-                                    import json as dynamic_json
-                                    try:
-                                        wh_json = dynamic_json.loads(webhook_content)
-                                        # Use standard parser
-                                        b64_str = None
-                                        
-                                        # NanoBanana nested structures
-                                        if isinstance(wh_json.get('data'), dict):
-                                            d = wh_json['data']
-                                            info = d.get('info') or {}
-                                            b64_str = (
-                                                info.get('resultImageUrl') or
-                                                (d.get('result_urls') and d['result_urls'][0]) or
-                                                d.get('image') or 
-                                                d.get('url') or 
-                                                d.get('base64')
-                                            )
-                                            
-                                        # Fallback to root level strings
-                                        if not b64_str:
-                                            b64_str = (
-                                                wh_json.get('image') or 
-                                                wh_json.get('images', [None])[0] or 
-                                                (wh_json.get('result_urls') and wh_json['result_urls'][0]) or
-                                                wh_json.get('url') or
-                                                wh_json.get('base64') or
-                                                (wh_json.get('data') if isinstance(wh_json.get('data'), str) else None)
-                                            )
-                                        
-                                        if b64_str and isinstance(b64_str, str) and b64_str.startswith('http'):
-                                            # If it sent an image URL instead of base64
-                                            img_data = requests.get(b64_str).content
-                                            img_array = np.asarray(bytearray(img_data), dtype=np.uint8)
-                                        else:
-                                            img_array = np.asarray(bytearray(base64.b64decode(b64_str)), dtype=np.uint8)
-                                            
-                                        external_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-                                    except Exception as we:
-                                        print(f"\n[!] Webhook parsing error: {we}. Content: {webhook_content[:300]}")
-                                else:
-                                    print("\n[!] Webhook timed out waiting for NanobananaAPI after 3 minutes.")
-                            else:
-                                # Synchronous fallback just in case
-                                b64_str = (
-                                    resp_json.get('image') or 
-                                    resp_json.get('images', [None])[0] or 
-                                    resp_json.get('data') or 
-                                    resp_json.get('base64')
-                                )
-                                img_array = np.asarray(bytearray(base64.b64decode(b64_str)), dtype=np.uint8)
-                                external_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-                                
-                        except Exception as e:
-                            print(f"[!] Parsing Exception: {e}")
-                            try:
-                                img_array = np.asarray(bytearray(response.content), dtype=np.uint8)
-                                external_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-                            except Exception:
-                                pass
-
-                        
-                        if external_img is not None:
-                            # Save the RAW uncropped external image to full outputs folder
-                            full_out_dir = 'static/full_outputs'
-                            os.makedirs(full_out_dir, exist_ok=True)
-                            raw_save_path = os.path.join(full_out_dir, 'external_raw.jpg')
-                            cv2.imwrite(raw_save_path, external_img)
-                            print(f"[✓] Saved raw uncropped external image to {raw_save_path}")
-
-                            # Crop the bottom 15%
-                            h_ext, w_ext = external_img.shape[:2]
-                            crop_h = int(h_ext * 0.85)
-                            ai_result = external_img[:crop_h, :]
-                            print(f"[~] Cropped bottom 15% (Old H: {h_ext}, New H: {crop_h})")
-                            
-                            ai_result = cv2.resize(ai_result, (orig_w, orig_h))
-                            pipeline_used = 'External-API'
-                        else:
-                            print("[!] Failed to decode external image layout. Generating error image.")
-                            pipeline_used = 'External-API-Error'
-                            ai_result = np.zeros((orig_h, orig_w, 3), dtype=np.uint8)
-                            cv2.putText(ai_result, "API Error: No image returned", (20, orig_h//2), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                    else:
-                        print(f"[!] External API failed (Status {response.status_code}). Generating error image.")
-                        pipeline_used = 'External-API-Error'
-                        ai_result = np.zeros((orig_h, orig_w, 3), dtype=np.uint8)
-                        cv2.putText(ai_result, f"API failed (Status {response.status_code})", (20, orig_h//2), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                    
-                except Exception as e:
-                    print(f"[!] API call Exception: {e}. Generating error image.")
-                    pipeline_used = 'External-API-Error'
-                    ai_result = np.zeros((orig_h, orig_w, 3), dtype=np.uint8)
-                    cv2.putText(ai_result, f"Exception: {str(e)[:40]}", (20, orig_h//2), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
-
-                ai_succeeded = True
-                print("[✓] AI inference step completed!")
-
-            else:
-                print("[!] VITON model not available")
-
-        except Exception as e:
-            print(f"[!] AI inference failed: {e}")
-            import traceback
-            traceback.print_exc()
-            ai_succeeded = False
-
-        # ── STEP 4: Fallback if AI failed ────────────────
+        # ── STEP 4: Local OpenCV fallback ─────────────────
         if not ai_succeeded:
             print("\n[STEP 3b] Using Enhanced OpenCV Fallback")
             pipeline_used = 'Enhanced-OpenCV'
@@ -782,16 +485,12 @@ def run_ai_tryon(person_path, clothing_path, output_path):
 
         # ── STEP 5: Post-Processing ───────────────────────
         print("\n[STEP 4] Post-Processing")
-        if pipeline_used in ['External-API', 'External-API-Error']:
-            print(f"[~] Skipping local post-processing for {pipeline_used}.")
-            final_result = ai_result
-        else:
-            final_result = post_process_result(
-                ai_result,
-                original_person,
-                shirt_mask,
-                orig_h, orig_w
-            )
+        final_result = post_process_result(
+            ai_result,
+            original_person,
+            shirt_mask,
+            orig_h, orig_w
+        )
 
         # ── STEP 6: Watermark ─────────────────────────────
         final_result = add_watermark(final_result)

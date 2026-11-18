@@ -484,7 +484,8 @@ def save_debug_masks(img_bgr, person_mask, shirt_mask,
 # PART 6 — MAIN FUNCTION (called by image_processor.py)
 # ═════════════════════════════════════════════════════════
 
-def segment_and_remove_shirt(person_path, save_debug=True):
+def segment_and_remove_shirt(person_path, save_debug=True,
+                             output_dir='static/outputs'):
     """
     Complete shirt removal pipeline.
 
@@ -526,7 +527,8 @@ def segment_and_remove_shirt(person_path, save_debug=True):
 
     # Step 5: Save debug images
     if save_debug:
-        save_debug_masks(img, person_mask, shirt_mask, cleaned_img)
+        save_debug_masks(img, person_mask, shirt_mask, cleaned_img,
+                         output_dir=output_dir)
 
     print("[✓] Segmentation pipeline complete!")
     print("────────────────────────────────────────────────\n")

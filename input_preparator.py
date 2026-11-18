@@ -910,7 +910,8 @@ def _colorize_segmap(segmap):
 def prepare_all_inputs(person_path, cloth_path,
                         shirt_mask=None,
                         landmarks=None,
-                        save_debug=True):
+                        save_debug=True,
+                        output_dir='static/outputs'):
     """
     Master function — prepares ALL inputs for VITON model.
 
@@ -994,7 +995,8 @@ def prepare_all_inputs(person_path, cloth_path,
     if save_debug:
         visualize_inputs(
             person_prep, cloth_prep,
-            pose_hmap, segmap, agnostic
+            pose_hmap, segmap, agnostic,
+            output_dir=output_dir
         )
 
     print("[✓] All inputs prepared!")

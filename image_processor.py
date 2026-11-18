@@ -1,5 +1,5 @@
 # image_processor.py — FINAL VERSION (Step 4)
-# Clean connector between Flask and the AI pipeline
+# Connect Flask routes to the local image pipeline
 
 import cv2
 import numpy as np
@@ -15,15 +15,15 @@ from inference_engine import run_ai_tryon
 # ─────────────────────────────────────────────────────────
 
 def run_tryon_pipeline(person_path, clothing_path,
-                        output_path):
+                        output_path, debug_output_dir=None):
     """
     Entry point called by Flask (app.py).
 
-    Simply delegates to the AI inference engine.
+    Simply delegates to the local image-processing engine.
     Returns: (success: bool, result_path or error: str)
     """
     return run_ai_tryon(person_path, clothing_path,
-                         output_path)
+                         output_path, debug_output_dir)
 
 
 # ─────────────────────────────────────────────────────────

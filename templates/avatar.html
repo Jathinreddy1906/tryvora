@@ -305,7 +305,8 @@
                      id="texPreview"
                      onclick="document.getElementById('texFile').click()">
                     {% if clothing_image %}
-                    <img src="{{ url_for('static',
+                    <img src="{{ url_for('private_media',
+                                 file_type='uploads',
                                  filename=clothing_image) }}"
                          alt="Clothing">
                     {% else %}
@@ -346,7 +347,8 @@
                 <div style="border-radius:10px;
                             overflow:hidden;
                             border:1px solid var(--border);">
-                    <img src="{{ url_for('static',
+                    <img src="{{ url_for('private_media',
+                                 file_type='outputs',
                                  filename=result_image) }}"
                          style="width:100%;display:block;">
                 </div>
@@ -670,7 +672,8 @@ window.addEventListener('load', () => {
     // Pre-fill URL if clothing exists
     {% if clothing_image %}
     window._pendingTexture =
-        "{{ url_for('static', filename=clothing_image) }}";
+        "{{ url_for('private_media', file_type='uploads',
+                    filename=clothing_image) }}";
     {% endif %}
 });
 </script>
